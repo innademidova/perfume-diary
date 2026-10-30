@@ -6,6 +6,8 @@
 //     "lookups": [{ "perfume_id": "...", "name": "", "brand": "", "year": 2020, "perfumer": "", "concentration": "EDP",
 //                   "family": "", "top_notes": [], "heart_notes": [], "base_notes": [], "fragrantica_id": "12345" }],
 //     "imports_done": [{ "id": "...", "result": "added 5, skipped 2 duplicates" }],   (perfumes themselves → scripts/add-perfumes.mjs)
+//     "recommendations": [{ "id": "...", "items": [{ name, brand, year, family, concentration, fragrantica_url,
+//        fragrantica_id, top_notes, heart_notes, base_notes, why (UA), risk (UA|null), match: high|medium|low }] }],
 //     "terms": [{ "id": "...", "kind": "note", "smell": "...", "description": "..." }],
 //     "predictions": [{ "perfume_id": "...", "rating": 2.5, "confidence": "medium",
 //                       "summary": "...", "likes": [], "risks": [] }] }
@@ -32,6 +34,7 @@ if (cmd === 'export') {
     sb.from('predictions').select('*'), sb.from('taste_profile').select('*').maybeSingle(),
     sb.from('import_requests').select('*').eq('status', 'queued'),
   ])
+  const { data: recs } = await sb.from('recommend_requests').select('*').eq('status', 'queued')
   // фото з черги зберігаємо поруч із файлом контексту, щоб їх можна було переглянути
   const imgDir = join(dirname(file), 'imports'); mkdirSync(imgDir, { recursive: true })
   const importItems = []
@@ -51,6 +54,10 @@ if (cmd === 'export') {
     // чернетки: знайти точну версію на Fragrantica, ноти та фото (fragrantica_id)
     // фото/скріншоти: розпізнати аромати, додати через scripts/add-perfumes.mjs (пропускаючи дублікати), потім imports_done
     imports: importItems,
+    // підбір ароматів поза щоденником: 5–8 варіантів (див. CLAUDE.md), результати → "recommendations"
+    recommend: (recs ?? []).map(r => ({ id: r.id, query: r.query,
+      based_on: r.perfume_id ? strip(perfumes.find(p => p.id === r.perfume_id) ?? {}) : null })),
+    diary_names: perfumes.map(p => `${p.brand ?? ''} ${p.name}`.trim()),
     // ноти, які треба пояснити українською (паспорт ноти)
     terms_to_explain: terms.filter(t => t.ai_status === 'queued').map(t => ({ id: t.id, name: t.name })),
     lookups: perfumes.filter(p => p.lookup_status === 'queued').map(p => ({ perfume_id: p.id, name: p.name, brand: p.brand, status: p.status })),
@@ -62,7 +69,7 @@ if (cmd === 'export') {
     }),
   }
   writeFileSync(file, JSON.stringify(out, null, 1))
-  console.log(`imports: ${out.imports.length}, notes to explain: ${out.terms_to_explain.length}, lookups: ${out.lookups.length}, queue: ${queue.length}, profile requested: ${out.profile_requested}, rated: ${rated.length} → ${file}`)
+  console.log(`recommend: ${out.recommend.length}, imports: ${out.imports.length}, notes to explain: ${out.terms_to_explain.length}, lookups: ${out.lookups.length}, queue: ${queue.length}, profile requested: ${out.profile_requested}, rated: ${rated.length} → ${file}`)
 } else if (cmd === 'apply') {
   const res = JSON.parse(readFileSync(file, 'utf8'))
   if (res.profile) {
@@ -92,6 +99,11 @@ if (cmd === 'export') {
     const { id, ...fields } = t
     const { error } = await sb.from('terms').update({ ...fields, ai_status: null }).eq('id', id)
     console.log('term', id, error?.message ?? 'saved')
+  }
+  for (const r of res.recommendations ?? []) {
+    const items = r.items.map(it => ({ ...it, image_url: it.fragrantica_id ? `https://fimgs.net/mdimg/perfume/o.${it.fragrantica_id}.jpg` : null }))
+    const { error } = await sb.from('recommend_requests').update({ status: 'done', items, done_at: new Date().toISOString() }).eq('id', r.id)
+    console.log('recommendation', r.id, error?.message ?? `${items.length} items`)
   }
   for (const r of res.imports_done ?? []) {
     const { error } = await sb.from('import_requests').update({ status: 'done', result: r.result ?? null }).eq('id', r.id)

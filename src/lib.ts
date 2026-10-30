@@ -88,11 +88,12 @@ export const REASONS: Record<string, string> = {
   notes: 'I like the notes',
   review: 'Review or blog',
   store: 'Smelled it in a store',
+  ai: 'AI recommendation',
   other: 'Other',
 }
 export const REASONS_SHORT: Record<string, string> = {
   friend: 'Recommended', reels: 'Reels', tiktok: 'TikTok', youtube: 'YouTube',
-  notes: 'The notes', review: 'Review', store: 'Store', other: 'Other',
+  notes: 'The notes', review: 'Review', store: 'Store', ai: 'AI pick', other: 'Other',
 }
 
 export const SEASONS: Record<string, string> = {

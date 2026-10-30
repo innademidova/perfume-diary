@@ -146,3 +146,19 @@ create policy "own imports" on public.import_requests for all to authenticated
 
 -- Паспорт ноти: опис від ІІ можна поставити в чергу
 alter table public.terms add column if not exists ai_status text;  -- queued | null
+
+-- Асистент-підбирач: запити й результати (зараз через API або в черзі для Claude Code)
+create table if not exists public.recommend_requests (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  query       text not null,
+  perfume_id  uuid references public.perfumes(id) on delete set null,
+  status      text not null default 'queued',   -- queued, done
+  items       jsonb not null default '[]',
+  created_at  timestamptz not null default now(),
+  done_at     timestamptz
+);
+alter table public.recommend_requests enable row level security;
+drop policy if exists "own recs" on public.recommend_requests;
+create policy "own recs" on public.recommend_requests for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());

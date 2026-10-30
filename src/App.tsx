@@ -6,6 +6,7 @@ import { PerfumeList, PerfumeDetail, PerfumeForm, emptyFilters, isWish, type Fil
 import { TermList, TermDetail, TermForm } from './Terms'
 import { More } from './More'
 import { AIContext, type Prediction, type TasteProfile } from './ai'
+import { Discover } from './Discover'
 import { ImportScreen, LinksCard, Compare, NotePassport, type PerfumeLink } from './Extra'
 
 // Маршрути в адресі після #, щоб працювало на GitHub Pages
@@ -13,7 +14,7 @@ export type Route =
   | { view: 'list' } | { view: 'wishlist' } | { view: 'perfume'; id: string }
   | { view: 'perfume-edit'; id?: string; wish?: boolean; convert?: boolean }
   | { view: 'terms' } | { view: 'term'; id: string } | { view: 'term-edit'; id?: string }
-  | { view: 'more' } | { view: 'import'; wish: boolean } | { view: 'compare'; a: string; b: string } | { view: 'note'; note: string }
+  | { view: 'more' } | { view: 'import'; wish: boolean } | { view: 'compare'; a: string; b: string } | { view: 'note'; note: string } | { view: 'discover'; base?: string }
 
 function parse(hash: string): Route {
   const [a, b, c] = hash.replace(/^#\/?/, '').split('/')
@@ -28,6 +29,7 @@ function parse(hash: string): Route {
   if (a === 't' && b && c === 'edit') return { view: 'term-edit', id: b }
   if (a === 't' && b) return { view: 'term', id: b }
   if (a === 'more') return { view: 'more' }
+  if (a === 'discover') return { view: 'discover', base: b }
   if (a === 'import') return { view: 'import', wish: b === 'wishlist' }
   if (a === 'compare' && b && c) return { view: 'compare', a: b, b: c }
   if (a === 'n' && b) return { view: 'note', note: decodeURIComponent(b) }
@@ -145,7 +147,7 @@ function Diary({ email }: { email: string }) {
 
   const findP = (id?: string) => perfumes.find(p => p.id === id)
   const openP = route.view === 'perfume' ? findP(route.id) : undefined
-  const tab = route.view.startsWith('term') ? 'terms' : route.view === 'more' ? 'more'
+  const tab = route.view.startsWith('term') ? 'terms' : route.view === 'more' ? 'more' : route.view === 'discover' ? 'discover'
     : route.view === 'wishlist' || (openP && isWish(openP)) ? 'wishlist' : 'list'
   const findT = (id?: string) => terms.find(t => t.id === id)
 
@@ -193,6 +195,10 @@ function Diary({ email }: { email: string }) {
       screen = <NotePassport note={route.note} perfumes={perfumes} terms={terms} onTerm={saveTerm}
         onFilter={note => { setFilters({ ...emptyFilters, note }); go('/') }} />
       break
+    case 'discover':
+      screen = <Discover key={route.base ?? 'all'} perfumes={perfumes} basePerfume={findP(route.base)}
+        onAdded={x => setPerfumes(list => [x, ...(list ?? [])])} />
+      break
     case 'more':
       screen = <More email={email} perfumes={perfumes} terms={terms} />
   }
@@ -213,6 +219,7 @@ function Diary({ email }: { email: string }) {
           <span className="tabbar-brand">Perfume Diary</span>
           <a href="#/" className={tab === 'list' ? 'on' : ''}><Icon name="bottle" /><span>Perfumes</span></a>
           <a href="#/wishlist" className={tab === 'wishlist' ? 'on' : ''}><Icon name="bookmark" /><span>Want to try</span></a>
+          <a href="#/discover" className={tab === 'discover' ? 'on' : ''}><Icon name="spark" /><span>Discover</span></a>
           <a href="#/terms" className={tab === 'terms' ? 'on' : ''}><Icon name="book" /><span>Glossary</span></a>
           <a href="#/more" className={tab === 'more' ? 'on' : ''}><Icon name="more" /><span>Insights</span></a>
         </nav>

@@ -502,6 +502,8 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
 
         {children}
 
+        <button className="btn" onClick={() => go(`/discover/${p.id}`)}><Icon name="spark" /> Find similar outside my diary</button>
+
         <p className="muted small center">Added {formatDate(p.created_at)}</p>
         <button className="btn danger ghost" onClick={remove}><Icon name="trash" /> Delete perfume</button>
       </div>

@@ -826,3 +826,25 @@ img.cmp-img { object-fit: contain; background: #fff; }
   .screen.view-note, .screen.view-import { --w: 820px; margin-left: calc(220px + max(0px, (100vw - 220px - var(--w)) / 2)); }
   .screen.view-compare { --w: 1000px; }
 }
+
+/* --- Discover --- */
+.rec { gap: 14px; }
+.rec-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.rec-head .btn-icon { width: 34px; height: 34px; }
+.rec-head .btn-icon .icon { width: 16px; height: 16px; }
+.rec-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.rec-list li { display: flex; gap: 12px; padding: 12px; border-radius: 18px; background: var(--surface-2); }
+.rec-list img, .rec-list .thumb { width: 84px; height: 110px; object-fit: contain; background: #fff; border-radius: 14px; flex: none; }
+.rec-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.rec-risk { color: var(--danger); }
+.pill.match-high { background: #e3f4ea; color: #2f7a4f; }
+.pill.match-low { background: #fde4e4; color: #b2434b; }
+.rec-list .chip { font-size: 12px; padding: 4px 10px; }
+@media (min-width: 1100px) { .rec-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .tabbar a span { font-size: 10px; } }
+.rec-list .chip { background: var(--surface-solid); }
+@media (max-width: 699px) {
+  .tabbar { width: calc(100% - 16px); padding: 5px; }
+  .tabbar a { min-width: 0; padding: 7px 2px 6px; }
+  .tabbar a span { font-size: 10px; white-space: nowrap; }
+}

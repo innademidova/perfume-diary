@@ -196,6 +196,51 @@ Reply with ONLY JSON: {"profile": "...", "loves": ["4–7 short Ukrainian tags"]
   return data;
 }
 
+// ---------- Асистент-підбирач ----------
+
+async function recommend(sb: SupabaseClient, query: string, perfumeId: string | null) {
+  const { all, context } = await diary(sb);
+  const base = perfumeId ? all.find(p => p.id === perfumeId) : null;
+  const known = all.map(p => `${p.brand ?? ""} ${p.name}`.trim()).join("; ");
+  const ask = base
+    ? `Find perfumes similar to this one from my diary (but NOT already in my diary): ${JSON.stringify(slim(base))}${query ? `\nExtra wishes: ${query}` : ""}`
+    : query;
+  const messages: Anthropic.MessageParam[] = [{
+    role: "user",
+    content: `${ask}
+
+Search the web (fragrantica.com is best) and suggest 5–8 real perfumes I have NOT tried. Perfumes already in my diary (exclude them): ${known}
+Use my reviews and taste profile: avoid what I dislike, explain honestly where the risk is.
+
+Reply with ONLY JSON:
+{"items":[{"name":"","brand":"","year":null,"family":null,"concentration":null,"fragrantica_url":"","top_notes":[],"heart_notes":[],"base_notes":[],"why":"2–3 sentences in Ukrainian addressed to me (ти): why it fits my request and taste, compared with perfumes I rated","risk":"1 sentence in Ukrainian or null","match":"high"|"medium"|"low"}]}
+Notes in English lowercase. fragrantica_url must be an exact perfume page URL ending with -<number>.html.`,
+  }];
+  let res: Anthropic.Message | null = null;
+  for (let i = 0; i < 4; i++) {
+    res = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 8000,
+      system: [{ type: "text", text: ROLE }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 6 }],
+      messages,
+    });
+    if (res.stop_reason !== "pause_turn") break;
+    messages.push({ role: "assistant", content: res.content });
+  }
+  const out = parseJson(textOf(res!.content));
+  const items = (out.items ?? []).map((c: Record<string, unknown>) => {
+    const id = String(c.fragrantica_url ?? "").match(/-(\d+)\.html/)?.[1] ?? null;
+    return { ...c, fragrantica_id: id, image_url: id ? `https://fimgs.net/mdimg/perfume/o.${id}.jpg` : null };
+  });
+  const { data, error } = await sb.from("recommend_requests").insert({
+    query: query || (base ? `Similar to ${base.brand ?? ""} ${base.name}`.trim() : ""), perfume_id: base?.id ?? null,
+    status: "done", items, done_at: new Date().toISOString(),
+  }).select().single();
+  if (error) throw error;
+  return data;
+}
+
 // ---------- Вхід ----------
 
 Deno.serve(async (req) => {
@@ -212,6 +257,7 @@ Deno.serve(async (req) => {
       case "image": return json(await saveImage(sb, user.id, String(body.fragrantica_id)));
       case "forecast": return json(await forecast(sb, String(body.perfume_id)));
       case "profile": return json(await profile(sb));
+      case "recommend": return json(await recommend(sb, String(body.query ?? "").slice(0, 600), body.perfume_id ? String(body.perfume_id) : null));
       case "scan": return json(await scan(String(body.image), String(body.media_type ?? "image/jpeg")));
       case "explain_note": return json(await explainNote(sb, String(body.note ?? "").slice(0, 80)));
       default: return json({ error: "Unknown action" }, 400);

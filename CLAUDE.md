@@ -31,6 +31,8 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
 - `src/Perfumes.tsx` list (filters, Rated / To rate segmented control), detail card, add/edit form.
 - `src/Terms.tsx` glossary. `src/More.tsx` Insights tab. `src/ui.tsx` shared components + icons.
 - `src/predict.ts` note statistics + "similar perfumes" (no numeric forecast — see INSIGHTS).
+- `src/Extra.tsx` add-from-photo, perfume links + Compare, Note passport. `src/Discover.tsx` AI recommendations
+  (Discover tab; `recommend` action uses web search, ~3–5¢; results stored in `recommend_requests`).
 - `src/ai.tsx` AI forecast card, taste profile card, accuracy card (queue-based, see below).
 - `supabase/schema.sql` full schema; apply changes via SQL (append new statements to this file too).
 - `scripts/sql.mjs` run SQL against the database (schema changes; token from the Supabase CLI login in Keychain).
@@ -97,6 +99,10 @@ The app only queues requests; Claude Code is the model. When she asks to process
    bottles, or a Ukrainian notebook page with rating /10 and review), skip ones already in the diary, find them on
    Fragrantica, verify photos, add with `scripts/add-perfumes.mjs` (status = `target_status`), then list the id in
    `imports_done` with a short result.
+4c. For each item in `recommend` (Discover tab): suggest 5–8 real perfumes NOT in `diary_names` that fit the query
+   (and `based_on` perfume if given) and her taste; verify each on Fragrantica (exact page + id, notes); `why` = 2–3
+   sentences in Ukrainian ("ти") comparing with her rated perfumes, `risk` = 1 sentence or null, `match`. Put them in
+   `recommendations`.
 4b. For each item in `terms_to_explain`: write `kind`, `smell` (1–2 sentences) and `description` (2–4 sentences) in
    Ukrainian, addressing her as "ти", and put them in `terms`.
 4. For each item in `lookups` (drafts she added by name only): find the exact Fragrantica page (see "Adding perfumes"),
