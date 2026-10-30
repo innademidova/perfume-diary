@@ -40,3 +40,4 @@
 19. Wide monitors: content fills the screen (grid up to ~1640px, centred), narrow pages centred; Insights stat renamed to «in my diary».
 20. Photos replaced for Carate Urio and Red Enigma (white background). Added 24 perfumes to Want to try from her shop screenshots (with ₴/ml where shown); duplicates skipped.
 21. Helper scripts moved into the repo (sql.mjs, add-perfumes.mjs) and CLAUDE.md documents what persists between sessions.
+22. Add from photo (screenshot/bottles/notebook → recognize → skip duplicates → find versions → add; or queue), perfume links (similar/alternative/twin, 15 seeded from her reviews) with side-by-side Compare, Note passport (/n/<note>: explanation via AI or queue, saved to glossary; her average; often paired; perfumes by section). Tapping notes anywhere opens the passport.

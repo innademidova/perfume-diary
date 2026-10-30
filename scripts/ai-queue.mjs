@@ -5,10 +5,13 @@
 //   { "profile": { "profile": "...", "loves": [], "avoids": [] } | null,
 //     "lookups": [{ "perfume_id": "...", "name": "", "brand": "", "year": 2020, "perfumer": "", "concentration": "EDP",
 //                   "family": "", "top_notes": [], "heart_notes": [], "base_notes": [], "fragrantica_id": "12345" }],
+//     "imports_done": [{ "id": "...", "result": "added 5, skipped 2 duplicates" }],   (perfumes themselves → scripts/add-perfumes.mjs)
+//     "terms": [{ "id": "...", "kind": "note", "smell": "...", "description": "..." }],
 //     "predictions": [{ "perfume_id": "...", "rating": 2.5, "confidence": "medium",
 //                       "summary": "...", "likes": [], "risks": [] }] }
 // Логін береться з .env.local (PERFUME_EMAIL, PERFUME_PASSWORD) — файл не потрапляє в git.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 
 const env = Object.fromEntries(readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
@@ -24,10 +27,20 @@ const strip = p => Object.fromEntries(Object.entries(p).filter(([k, v]) =>
   && v != null && !(Array.isArray(v) && !v.length)))
 
 if (cmd === 'export') {
-  const [{ data: perfumes }, { data: terms }, { data: predictions }, { data: profile }] = await Promise.all([
+  const [{ data: perfumes }, { data: terms }, { data: predictions }, { data: profile }, { data: imports }] = await Promise.all([
     sb.from('perfumes').select('*'), sb.from('terms').select('*'),
     sb.from('predictions').select('*'), sb.from('taste_profile').select('*').maybeSingle(),
+    sb.from('import_requests').select('*').eq('status', 'queued'),
   ])
+  // фото з черги зберігаємо поруч із файлом контексту, щоб їх можна було переглянути
+  const imgDir = join(dirname(file), 'imports'); mkdirSync(imgDir, { recursive: true })
+  const importItems = []
+  for (const r of imports ?? []) {
+    const { data: blob } = await sb.storage.from('photos').download(r.image_path)
+    const local = join(imgDir, `${r.id}.jpg`)
+    if (blob) writeFileSync(local, Buffer.from(await blob.arrayBuffer()))
+    importItems.push({ id: r.id, target_status: r.target_status, image: local })
+  }
   const rated = perfumes.filter(p => p.status !== 'wishlist' && p.rating != null)
   const queue = predictions.filter(x => x.status === 'queued')
   const out = {
@@ -36,6 +49,10 @@ if (cmd === 'export') {
     rated_count: rated.length,
     queue: queue.map(q => strip(perfumes.find(p => p.id === q.perfume_id))),
     // чернетки: знайти точну версію на Fragrantica, ноти та фото (fragrantica_id)
+    // фото/скріншоти: розпізнати аромати, додати через scripts/add-perfumes.mjs (пропускаючи дублікати), потім imports_done
+    imports: importItems,
+    // ноти, які треба пояснити українською (паспорт ноти)
+    terms_to_explain: terms.filter(t => t.ai_status === 'queued').map(t => ({ id: t.id, name: t.name })),
     lookups: perfumes.filter(p => p.lookup_status === 'queued').map(p => ({ perfume_id: p.id, name: p.name, brand: p.brand, status: p.status })),
     rated: rated.map(strip),
     glossary: terms.map(t => ({ name: t.name, kind: t.kind, smell: t.smell, description: t.description })),
@@ -45,7 +62,7 @@ if (cmd === 'export') {
     }),
   }
   writeFileSync(file, JSON.stringify(out, null, 1))
-  console.log(`lookups: ${out.lookups.length}, queue: ${queue.length}, profile requested: ${out.profile_requested}, rated: ${rated.length} → ${file}`)
+  console.log(`imports: ${out.imports.length}, notes to explain: ${out.terms_to_explain.length}, lookups: ${out.lookups.length}, queue: ${queue.length}, profile requested: ${out.profile_requested}, rated: ${rated.length} → ${file}`)
 } else if (cmd === 'apply') {
   const res = JSON.parse(readFileSync(file, 'utf8'))
   if (res.profile) {
@@ -70,6 +87,15 @@ if (cmd === 'export') {
     }
     const { error } = await sb.from('perfumes').update({ ...fields, ...(photo_path ? { photo_path } : {}), lookup_status: null }).eq('id', perfume_id)
     console.log('lookup', fields.name, error?.message ?? (photo_path ? 'saved with photo' : 'saved'))
+  }
+  for (const t of res.terms ?? []) {
+    const { id, ...fields } = t
+    const { error } = await sb.from('terms').update({ ...fields, ai_status: null }).eq('id', id)
+    console.log('term', id, error?.message ?? 'saved')
+  }
+  for (const r of res.imports_done ?? []) {
+    const { error } = await sb.from('import_requests').update({ status: 'done', result: r.result ?? null }).eq('id', r.id)
+    console.log('import', r.id, error?.message ?? 'done')
   }
   for (const p of res.predictions ?? []) {
     const { error } = await sb.from('predictions').update({

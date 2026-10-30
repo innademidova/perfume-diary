@@ -93,6 +93,12 @@ The app only queues requests; Claude Code is the model. When she asks to process
 3. For each queued perfume write a forecast: rating (0.5 steps), confidence, a 3–5 sentence summary in Ukrainian
    in her style (what she'll probably smell, what she'll like/dislike, compare with perfumes she rated), likes/risks
    tags. Use her patterns (see INSIGHTS) and similar rated perfumes. Learn from past misses.
+4a. For each item in `imports`: look at the image (Read the local file), recognize perfumes (shop screenshot,
+   bottles, or a Ukrainian notebook page with rating /10 and review), skip ones already in the diary, find them on
+   Fragrantica, verify photos, add with `scripts/add-perfumes.mjs` (status = `target_status`), then list the id in
+   `imports_done` with a short result.
+4b. For each item in `terms_to_explain`: write `kind`, `smell` (1–2 sentences) and `description` (2–4 sentences) in
+   Ukrainian, addressing her as "ти", and put them in `terms`.
 4. For each item in `lookups` (drafts she added by name only): find the exact Fragrantica page (see "Adding perfumes"),
    fill name, brand, year, perfumer, concentration, family, notes and `fragrantica_id` (the script copies the photo).
    Verify the bottle image visually before applying.

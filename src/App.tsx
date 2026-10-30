@@ -6,13 +6,14 @@ import { PerfumeList, PerfumeDetail, PerfumeForm, emptyFilters, isWish, type Fil
 import { TermList, TermDetail, TermForm } from './Terms'
 import { More } from './More'
 import { AIContext, type Prediction, type TasteProfile } from './ai'
+import { ImportScreen, LinksCard, Compare, NotePassport, type PerfumeLink } from './Extra'
 
 // Маршрути в адресі після #, щоб працювало на GitHub Pages
 export type Route =
   | { view: 'list' } | { view: 'wishlist' } | { view: 'perfume'; id: string }
   | { view: 'perfume-edit'; id?: string; wish?: boolean; convert?: boolean }
   | { view: 'terms' } | { view: 'term'; id: string } | { view: 'term-edit'; id?: string }
-  | { view: 'more' }
+  | { view: 'more' } | { view: 'import'; wish: boolean } | { view: 'compare'; a: string; b: string } | { view: 'note'; note: string }
 
 function parse(hash: string): Route {
   const [a, b, c] = hash.replace(/^#\/?/, '').split('/')
@@ -27,6 +28,9 @@ function parse(hash: string): Route {
   if (a === 't' && b && c === 'edit') return { view: 'term-edit', id: b }
   if (a === 't' && b) return { view: 'term', id: b }
   if (a === 'more') return { view: 'more' }
+  if (a === 'import') return { view: 'import', wish: b === 'wishlist' }
+  if (a === 'compare' && b && c) return { view: 'compare', a: b, b: c }
+  if (a === 'n' && b) return { view: 'note', note: decodeURIComponent(b) }
   return { view: 'list' }
 }
 
@@ -91,6 +95,7 @@ function Diary({ email }: { email: string }) {
   const [route, setRoute] = useState<Route>(() => parse(location.hash))
   const [perfumes, setPerfumes] = useState<Perfume[] | null>(null)
   const [terms, setTerms] = useState<Term[] | null>(null)
+  const [links, setLinks] = useState<PerfumeLink[]>([])
   const [filters, setFilters] = useState<Filters>(emptyFilters)
   const [wishFilters, setWishFilters] = useState<Filters>(emptyFilters)
   const [termQuery, setTermQuery] = useState('')
@@ -106,17 +111,19 @@ function Diary({ email }: { email: string }) {
 
   const load = useCallback(async () => {
     setLoadError('')
-    const [p, t, pr, tp] = await Promise.all([
+    const [p, t, pr, tp, ln] = await Promise.all([
       supabase.from('perfumes').select('*').order('created_at', { ascending: false }),
       supabase.from('terms').select('*').order('name'),
       supabase.from('predictions').select('*'),
       supabase.from('taste_profile').select('*').maybeSingle(),
+      supabase.from('perfume_links').select('*'),
     ])
     if (p.error || t.error) { setLoadError((p.error ?? t.error)!.message); return }
     setPerfumes(p.data as Perfume[])
     setTerms(t.data as Term[])
     setPredictions(new Map(((pr.data ?? []) as Prediction[]).map(x => [x.perfume_id, x])))
     setProfile((tp.data as TasteProfile | null) ?? null)
+    setLinks((ln.data ?? []) as PerfumeLink[])
   }, [])
   useEffect(() => { load() }, [load])
 
@@ -154,10 +161,9 @@ function Diary({ email }: { email: string }) {
       const p = findP(route.id)
       screen = p
         ? <PerfumeDetail perfume={p} perfumes={perfumes} terms={terms} onChange={savePerfume} onDelete={dropPerfume}
-            onNote={(note, mode) => {
-              if (mode === 'wishlist') { setWishFilters({ ...emptyFilters, note }); go('/wishlist') }
-              else { setFilters({ ...emptyFilters, note }); go('/') }
-            }} />
+            onNote={note => go(`/n/${encodeURIComponent(note)}`)}>
+            <LinksCard perfume={p} perfumes={perfumes} links={links} onLinksChange={setLinks} />
+          </PerfumeDetail>
         : <NotFound />
       break
     }
@@ -175,6 +181,17 @@ function Diary({ email }: { email: string }) {
     }
     case 'term-edit':
       screen = <TermForm key={route.id ?? 'new'} term={findT(route.id)} onSaved={saveTerm} />
+      break
+    case 'import':
+      screen = <ImportScreen perfumes={perfumes} initialStatus={route.wish ? 'wishlist' : 'decant'}
+        onAdded={x => setPerfumes(list => [x, ...(list ?? [])])} />
+      break
+    case 'compare':
+      screen = <Compare a={findP(route.a)} b={findP(route.b)} />
+      break
+    case 'note':
+      screen = <NotePassport note={route.note} perfumes={perfumes} terms={terms} onTerm={saveTerm}
+        onFilter={note => { setFilters({ ...emptyFilters, note }); go('/') }} />
       break
     case 'more':
       screen = <More email={email} perfumes={perfumes} terms={terms} />

@@ -113,3 +113,36 @@ create policy "own profile" on public.taste_profile for all to authenticated
 
 -- Черга пошуку: чернетка аромату, яку Claude Code заповнить нотами та фото
 alter table public.perfumes add column if not exists lookup_status text;  -- queued | null
+
+-- Зв'язки між ароматами: схожий / альтернатива / близнюк
+create table if not exists public.perfume_links (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  a          uuid not null references public.perfumes(id) on delete cascade,
+  b          uuid not null references public.perfumes(id) on delete cascade,
+  kind       text not null default 'similar',   -- similar, alternative, twin
+  note       text,
+  created_at timestamptz not null default now()
+);
+alter table public.perfume_links enable row level security;
+drop policy if exists "own links" on public.perfume_links;
+create policy "own links" on public.perfume_links for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Черга розпізнавання фото/скріншотів (безкоштовний шлях через Claude Code)
+create table if not exists public.import_requests (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  image_path    text not null,
+  target_status text not null default 'wishlist',
+  status        text not null default 'queued',   -- queued, done
+  result        text,
+  created_at    timestamptz not null default now()
+);
+alter table public.import_requests enable row level security;
+drop policy if exists "own imports" on public.import_requests;
+create policy "own imports" on public.import_requests for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Паспорт ноти: опис від ІІ можна поставити в чергу
+alter table public.terms add column if not exists ai_status text;  -- queued | null

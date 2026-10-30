@@ -69,6 +69,50 @@ async function saveImage(sb: SupabaseClient, userId: string, fragranticaId: stri
   return { path };
 }
 
+// ---------- Розпізнавання фото / скріншота ----------
+
+async function scan(image: string, mediaType: string) {
+  const res = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 4000,
+    messages: [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: mediaType as "image/jpeg", data: image } },
+        { type: "text", text: `This is a photo or screenshot with perfumes: a shop page, a wishlist, bottles, or a handwritten diary page (Ukrainian).
+List every distinct perfume you can identify. Reply with ONLY JSON:
+{"items":[{"brand":"","name":"","concentration":null,"price_per_ml":null,"rating10":null,"review":null}]}
+Rules: brand and name as the official perfume name in Latin letters (fix typos, e.g. "Gucchi" → "Gucci"); concentration only if visible (EDT, EDP, Parfum, Extrait); price_per_ml only if a price per 1 ml is shown (number); rating10 and review only for handwritten diary pages (copy the review text exactly, in Ukrainian). If nothing is recognizable, return {"items":[]}.` },
+      ],
+    }],
+  });
+  return parseJson(textOf(res.content));
+}
+
+// ---------- Паспорт ноти: як пахне ----------
+
+async function explainNote(sb: SupabaseClient, note: string) {
+  const res = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1500,
+    messages: [{
+      role: "user",
+      content: `Explain the perfume note "${note}" to a perfume lover who is learning. Write in Ukrainian, addressing her as "ти", simply and vividly.
+Reply with ONLY JSON: {"kind": "note"|"molecule"|"accord", "smell": "1–2 sentences: what it actually smells like, with everyday comparisons", "description": "2–4 sentences: what it is (natural/synthetic, where it comes from), how it behaves in perfumes, which notes it is often paired with, 2–3 well-known perfumes where it is prominent"}`,
+    }],
+  });
+  const f = parseJson(textOf(res.content));
+  const row = {
+    name: note, kind: ["note", "molecule", "accord"].includes(f.kind) ? f.kind : "note",
+    smell: String(f.smell ?? ""), description: String(f.description ?? ""), ai_status: null,
+  };
+  const { data: existing } = await sb.from("terms").select("id").ilike("name", note).maybeSingle();
+  const q = existing ? sb.from("terms").update(row).eq("id", existing.id) : sb.from("terms").insert(row);
+  const { data, error } = await q.select().single();
+  if (error) throw error;
+  return data;
+}
+
 // ---------- Контекст щоденника для прогнозів і профілю ----------
 
 const KEEP = ["name", "brand", "family", "top_notes", "heart_notes", "base_notes", "rating", "longevity", "sillage",
@@ -168,6 +212,8 @@ Deno.serve(async (req) => {
       case "image": return json(await saveImage(sb, user.id, String(body.fragrantica_id)));
       case "forecast": return json(await forecast(sb, String(body.perfume_id)));
       case "profile": return json(await profile(sb));
+      case "scan": return json(await scan(String(body.image), String(body.media_type ?? "image/jpeg")));
+      case "explain_note": return json(await explainNote(sb, String(body.note ?? "").slice(0, 80)));
       default: return json({ error: "Unknown action" }, 400);
     }
   } catch (e) {

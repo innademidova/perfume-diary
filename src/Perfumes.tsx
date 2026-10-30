@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import {
   supabase, allNotes, mentions, money, formatDate, norm, uploadPhoto, removePhoto, linkTitle, cleanLinks,
   FAMILIES, CONCENTRATIONS, COMMON_NOTES, STATUSES, TRIED_STATUSES, REASONS, REASONS_SHORT,
@@ -7,7 +7,7 @@ import {
 } from './lib'
 import { Stars, Scale, Meter, Chips, TagInput, Thumb, Field, Icon, LinksEditor, usePhotoUrls } from './ui'
 import { go, back } from './App'
-import { buildModel, clues } from './predict'
+import { buildModel, clues, canon } from './predict'
 import { ForecastCard, TwoWays } from './ai'
 
 export type Mode = 'tried' | 'wishlist'
@@ -82,7 +82,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
       if (f.family && p.family !== f.family) return false
       if (f.brand && p.brand !== f.brand) return false
       if (f.status && p.status !== f.status) return false
-      if (f.note && !allNotes(p).some(n => norm(n) === norm(f.note))) return false
+      if (f.note && !allNotes(p).some(n => canon(n) === canon(f.note))) return false
       if (f.minRating && (p.rating ?? 0) < f.minRating) return false
       if (f.season && !p.seasons.includes(f.season)) return false
       if (f.source && p.reason_source !== f.source) return false
@@ -117,7 +117,10 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
           <h1>{wish ? 'Want to try' : 'Perfumes'}</h1>
           <p className="muted small">{perfumes.length ? `${shown.length} of ${perfumes.length}` : 'nothing here yet'}</p>
         </div>
-        <button className="btn-icon accent" onClick={() => go(newPath)} aria-label="Add perfume"><Icon name="plus" /></button>
+        <div className="row">
+          <button className="btn-icon" onClick={() => go(wish ? '/import/wishlist' : '/import')} aria-label="Add from photo" title="Add from photo"><Icon name="camera" /></button>
+          <button className="btn-icon accent" onClick={() => go(newPath)} aria-label="Add perfume"><Icon name="plus" /></button>
+        </div>
       </header>
 
       {!wish && (toRateCount > 0 || f.toRate) && (
@@ -286,7 +289,8 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
 
 // ---------- Картка аромату ----------
 
-export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete, onNote }: {
+export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete, onNote, children }: {
+  children?: ReactNode
   perfume: Perfume
   perfumes: Perfume[]
   terms: Term[]
@@ -419,7 +423,7 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
                 <p className="muted small">How I usually rate these notes</p>
                 <div className="chips">
                   {hint.notes.map(n => (
-                    <span key={n.note} className={`chip note-stat ${n.n < 2 ? '' : n.delta >= 0.35 ? 'good' : n.delta <= -0.35 ? 'bad' : ''}`}>
+                    <span key={n.note} role="button" onClick={() => go(`/n/${encodeURIComponent(n.note)}`)} className={`chip note-stat ${n.n < 2 ? '' : n.delta >= 0.35 ? 'good' : n.delta <= -0.35 ? 'bad' : ''}`}>
                       {n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small>
                     </span>
                   ))}
@@ -443,7 +447,7 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
                 </div>
               </div>
             ))}
-            <p className="muted small">Tap a note to see every perfume that has it</p>
+            <p className="muted small">Tap a note to open its passport</p>
           </section>
         )}
 
@@ -495,6 +499,8 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
             </dl>
           </section>
         )}
+
+        {children}
 
         <p className="muted small center">Added {formatDate(p.created_at)}</p>
         <button className="btn danger ghost" onClick={remove}><Icon name="trash" /> Delete perfume</button>

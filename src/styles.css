@@ -778,3 +778,51 @@ details summary { cursor: pointer; }
   .plist.grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; }
   .tlist { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 }
+
+/* --- Додавання за фото --- */
+.import-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.import-list li { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 16px; background: var(--surface-2); }
+.import-list li.off { opacity: .5; }
+.import-list input[type=checkbox] { width: 22px; height: 22px; margin-top: 10px; accent-color: var(--pink-ink); -webkit-appearance: checkbox; appearance: auto; flex: none; }
+.import-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.import-fields input { background: var(--surface-solid); padding: 8px 12px; }
+.import-fields .pill { margin-left: 6px; }
+.confirm-row { display: flex; gap: 12px; align-items: center; padding: 8px; border-radius: 16px; background: var(--surface-2); }
+.confirm-row img { width: 56px; height: 70px; object-fit: contain; background: #fff; border-radius: 12px; flex: none; }
+.confirm-row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.confirm-row select { padding: 6px 30px 6px 10px; font-size: 14px; }
+label.photo-pick { display: block; cursor: pointer; }
+
+/* --- Зв'язки та порівняння --- */
+.link-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.link-list .prow { box-shadow: none; background: var(--surface-2); border-color: transparent; }
+.link-list .row { margin-top: 6px; }
+.link-add { display: flex; flex-direction: column; gap: 8px; }
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.cmp-col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cmp-photo { display: block; }
+.cmp-img { width: 100%; height: auto; aspect-ratio: 4 / 5; border-radius: 16px; }
+img.cmp-img { object-fit: contain; background: #fff; }
+.cmp-name { font-size: 18px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
+.cmp-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cmp .chip { font-size: 12px; padding: 5px 10px; }
+
+/* --- Паспорт ноти --- */
+.passport { display: flex; flex-direction: column; gap: 12px; }
+.passport .stat-row { margin: 0; }
+.note-verdict { padding: 12px 16px; border-radius: 16px; background: var(--surface-2); font-weight: 600; }
+.note-verdict.good { background: #e3f4ea; color: #2f7a4f; }
+.note-verdict.bad { background: #fde4e4; color: #b2434b; }
+@media (prefers-color-scheme: dark) {
+  .note-verdict.good { background: #1f3a2b; color: #9fd9b5; }
+  .note-verdict.bad { background: #43232a; color: #f2a5ad; }
+}
+.note-stat[role=button] { cursor: pointer; }
+
+@media (min-width: 700px) {
+  .screen.view-note, .screen.view-import { max-width: 820px; }
+}
+@media (min-width: 1100px) {
+  .screen.view-note, .screen.view-import { --w: 820px; margin-left: calc(220px + max(0px, (100vw - 220px - var(--w)) / 2)); }
+  .screen.view-compare { --w: 1000px; }
+}

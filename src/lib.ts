@@ -47,6 +47,7 @@ export type Term = {
   kind: string
   smell: string | null
   description: string | null
+  ai_status?: string | null
   created_at: string
   updated_at: string
 }

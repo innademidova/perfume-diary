@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { supabase, allNotes, money, type Perfume, type Term } from './lib'
 import { buildModel, noteInsights } from './predict'
 import { ProfileCard, AccuracyCard } from './ai'
+import { go } from './App'
 
 function top<T extends string>(xs: T[], n = 5) {
   const m = new Map<T, number>()
@@ -89,7 +90,7 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
             <>
               <p className="small"><b>I tend to like</b></p>
               <div className="chips">
-                {insight.loved.map(n => <span key={n.note} className="chip note-stat good">{n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small></span>)}
+                {insight.loved.map(n => <span key={n.note} role="button" onClick={() => go(`/n/${encodeURIComponent(n.note)}`)} className="chip note-stat good">{n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small></span>)}
               </div>
             </>
           )}
@@ -97,7 +98,7 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
             <>
               <p className="small"><b>I tend to avoid</b></p>
               <div className="chips">
-                {insight.avoid.map(n => <span key={n.note} className="chip note-stat bad">{n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small></span>)}
+                {insight.avoid.map(n => <span key={n.note} role="button" onClick={() => go(`/n/${encodeURIComponent(n.note)}`)} className="chip note-stat bad">{n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small></span>)}
               </div>
             </>
           )}
