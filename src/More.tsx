@@ -48,7 +48,7 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
       <header className="page-head"><div><h1>Insights</h1><p className="muted small">what my notes say about me</p></div></header>
 
       <div className="stat-row">
-        <div className="stat"><span className="stat-num">{stats.tried}</span><span className="muted small">tried</span></div>
+        <div className="stat"><span className="stat-num">{stats.tried}</span><span className="muted small">in my diary</span></div>
         <div className="stat"><span className="stat-num">{stats.avg ? stats.avg.toFixed(1) : '—'}</span><span className="muted small">average rating</span></div>
         <div className="stat"><span className="stat-num">{terms.length}</span><span className="muted small">in glossary</span></div>
       </div>

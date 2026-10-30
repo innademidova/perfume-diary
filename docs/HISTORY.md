@@ -37,3 +37,4 @@
 16. Password changed at her request (stored only in `.env.local`).
 17. Workspace ID received → API mode works (lookup ~15 s with 3 web searches; forecast ~5 s).
 18. Add form: "I have it / Want to try" switch (she couldn't find how to add to Want to try). Password field has a show/hide eye.
+19. Wide monitors: content fills the screen (grid up to ~1640px, centred), narrow pages centred; Insights stat renamed to «in my diary».
