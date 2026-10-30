@@ -34,7 +34,7 @@ type AI = {
 export const AIContext = createContext<AI>(null!)
 export const useAI = () => useContext(AIContext)
 
-export const QUEUE_HINT = 'Ask Claude Code on your computer: «обработай очередь»'
+export const QUEUE_HINT = 'Free option: it will appear here after you write «обработай очередь» to Claude Code on your computer. Need it right away? Use the button below (~1¢).'
 
 // Два способи: зараз через API (платно, копійки) або в чергу для Claude Code (безкоштовно, пізніше)
 export function TwoWays({ now, later, busy, nowLabel = 'Now', laterLabel = 'Add to queue' }: {
