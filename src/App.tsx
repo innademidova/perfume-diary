@@ -55,6 +55,7 @@ export default function App() {
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const submit = async (e: FormEvent) => {
@@ -72,8 +73,13 @@ function Login() {
         <p className="muted">My decants, notes and discoveries</p>
         <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}
           autoComplete="username" required />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
-          autoComplete="current-password" required />
+        <div className="pw-wrap">
+          <input type={showPw ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
+            autoComplete="current-password" autoCapitalize="none" autoCorrect="off" required />
+          <button type="button" className="pw-eye" onClick={() => setShowPw(v => !v)} aria-label={showPw ? 'Hide password' : 'Show password'}>
+            <Icon name={showPw ? 'eye-off' : 'eye'} />
+          </button>
+        </div>
         {error && <p className="error">{error}</p>}
         <button className="btn primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
       </form>

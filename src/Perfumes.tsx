@@ -670,10 +670,19 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
       {error && <p className="error">{error}</p>}
 
       {!perfume && (
+        <div className="segmented">
+          <button type="button" className={!wish ? 'on' : ''}
+            onClick={() => set({ status: 'decant', tried_on: d.tried_on ?? today(), volume_ml: d.volume_ml || '3' })}>I have it</button>
+          <button type="button" className={wish ? 'on' : ''}
+            onClick={() => set({ status: 'wishlist', tried_on: null })}>Want to try</button>
+        </div>
+      )}
+
+      {!perfume && (
         <section className="card ai-find">
           <h2>Find with AI</h2>
           <div className="row">
-            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Brand and name, e.g. Kilian Angels' Share"
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Brand + name, e.g. Kilian Angels' Share"
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); find() } }} />
           </div>
           {query.trim() && !candidates && (

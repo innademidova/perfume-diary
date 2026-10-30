@@ -36,3 +36,4 @@
     marked "filled by AI", source link) or "Add to queue" (draft with ⏳, filled by Claude Code).
 16. Password changed at her request (stored only in `.env.local`).
 17. Workspace ID received → API mode works (lookup ~15 s with 3 web searches; forecast ~5 s).
+18. Add form: "I have it / Want to try" switch (she couldn't find how to add to Want to try). Password field has a show/hide eye.
