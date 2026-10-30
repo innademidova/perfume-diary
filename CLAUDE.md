@@ -1,0 +1,91 @@
+# Perfume Diary — project context for Claude
+
+A personal perfume diary PWA for one user (the owner, not a developer). She tests perfumes from
+3 ml decants, writes down notes, ratings and reviews, and wants to learn her own taste. Claude does
+all technical work; the owner talks in Russian/Ukrainian and decides on features and design.
+
+Live: https://innademidova.github.io/perfume-diary/ (installed on her iPhone via Safari → Add to Home Screen)
+Repo: github.com/innademidova/perfume-diary · local: `~/projects/perfume-diary`
+
+More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHTS.md` (findings about her taste and data).
+
+## Hard rules from the owner
+
+- **App UI is English.** All other non-English text (code comments, README, commit messages, repo
+  description, glossary entries) must be **Ukrainian. Never Russian anywhere in the project.**
+  Chat replies to the owner: in the language she writes in, plain and non-technical.
+- Her reviews are kept exactly in her words (Ukrainian); only punctuation may be fixed.
+  Notes are stored in **English, lowercase** (matches the UI's note suggestions and filters).
+- Design: soft pastel pink + powder blue, modern sans (Plus Jakarta Sans), rounded translucent
+  cards, floating pill tab bar, light + dark. She rejected an earlier beige/serif "luxury" look.
+- Hosting must stay free (GitHub Pages + Supabase free tier).
+- Bottle photos must never be cropped (`object-fit: contain` on white).
+- Ask before anything that costs money.
+
+## Stack and layout
+
+- React 19 + Vite + TypeScript, `vite-plugin-pwa` (autoUpdate). No router lib: hash routes in `src/App.tsx`.
+- Supabase project "Perfumes" (ref `eyczhhvxuofvfeoqwfbg`). Publishable key is in `src/lib.ts` (safe: RLS + login).
+  Signups are disabled; single user `doc.idemidova@gmail.com`. Password: `.env.local` (git-ignored).
+- `src/lib.ts` types, constants (families, notes, statuses, reasons…), photo upload/compress, helpers.
+- `src/Perfumes.tsx` list (filters, Rated / To rate segmented control), detail card, add/edit form.
+- `src/Terms.tsx` glossary. `src/More.tsx` Insights tab. `src/ui.tsx` shared components + icons.
+- `src/predict.ts` note statistics + "similar perfumes" (no numeric forecast — see INSIGHTS).
+- `src/ai.tsx` AI forecast card, taste profile card, accuracy card (queue-based, see below).
+- `supabase/schema.sql` full schema; apply changes via SQL (append new statements to this file too).
+- `scripts/ai-queue.mjs` export/apply for the AI queue.
+
+## Data model (Supabase, all tables RLS "own rows only")
+
+- `perfumes`: name, brand, perfumer, year, concentration, family (free text, English), top/heart/base_notes (text[]),
+  price_per_ml (₴ by default), currency, volume_ml (3), status (`decant` | `sample` | `bottle` | `wishlist`),
+  rating (0–5 in 0.5 steps; her notebook uses /10 → divide by 2), longevity/sillage (1–5), seasons, daytime,
+  would_buy, tried_on, review, photo_path (Storage), favorite, reason_source + reason_note (why she wants it),
+  links (jsonb `[{url,label}]`).
+  - Sections: **Rated** = not wishlist & rating set · **To rate** = not wishlist & rating null ·
+    **Want to try** = status `wishlist`.
+- `terms`: glossary (molecule/note/accord/perfumer/term). Name in English so it auto-links to perfumes whose
+  notes/review contain it; smell/description in Ukrainian.
+- `predictions`: one per perfume — status `queued`|`done`, rating, confidence, summary (Ukrainian, her voice),
+  likes[], risks[].
+- `taste_profile`: one row — profile text (Ukrainian), loves[], avoids[], based_on (rated count), refresh_requested.
+- Storage bucket `photos` (private, signed URLs), path `<user_id>/<uuid>.jpg`.
+
+## Deploy
+
+`npm run build` to check, then `npm run deploy` (builds and force-pushes `dist` to the `gh-pages` branch;
+Pages is in legacy branch mode). Then commit + push `main`. GitHub Actions is NOT used (the gh token lacks
+`workflow` scope). Git on this Mac defaults to a work account; this repo uses a local credential helper
+`gh auth git-credential` for the personal account `innademidova` — don't touch global git config.
+After deploy, tell her to close and reopen the app on iPhone (PWA cache).
+
+## Workflow: "обработай очередь" (process the AI queue)
+
+The owner chose to run AI features through Claude Code on her subscription (free) instead of a paid API.
+The app only queues requests; Claude is the model. When she asks to process the queue:
+
+1. `node scripts/ai-queue.mjs export /tmp/…/ctx.json` → queue, all rated perfumes with reviews, glossary,
+   current profile, past predictions vs actual.
+2. If `profile_requested` (or ≥3 new ratings since `based_on`), rewrite the taste profile from **all review
+   texts**, not just notes. Keep it ~3 short paragraphs in Ukrainian addressed to her ("ти"), plus loves/avoids tags.
+3. For each queued perfume write a forecast: rating (0.5 steps), confidence, a 3–5 sentence summary in Ukrainian
+   in her style (what she'll probably smell, what she'll like/dislike, compare with perfumes she rated), likes/risks
+   tags. Use her patterns (see INSIGHTS) and similar rated perfumes. Learn from past misses.
+4. Write `{profile|null, predictions:[…]}` and run `node scripts/ai-queue.mjs apply res.json`.
+5. Tell her briefly what was predicted.
+
+## Adding perfumes for her (how it has been done)
+
+She gives names (or notebook photos — read handwriting, Ukrainian). For each: find the exact Fragrantica page
+(watch out for flankers: EDT vs EDP, Eau Fraîche, Elixir, year versions), take notes from there, and the bottle
+image `https://fimgs.net/mdimg/perfume/o.<fragrantica_id>.jpg`. Make a contact sheet to verify every bottle visually
+before importing. Upload the image to Storage, insert the row. Unrated owned perfumes → status `decant`, rating null.
+
+## Open items / ideas
+
+- **AI autofill when adding a perfume** (agreed design): search field at top of the add form → candidate versions
+  with bottle photos → pick one → form fields prefilled (highlighted, source link) → she edits and saves. Also
+  "paste a list" for bulk drafts. Backend: Supabase Edge Function `lookup` calling **Gemini API (free tier) with
+  Google Search grounding**; key stored in Supabase secrets. Waiting for her to create a Gemini API key
+  (aistudio.google.com → Get API key).
+- Possible later: chat with the diary ("what to wear this autumn?"), sort To rate by forecast.
