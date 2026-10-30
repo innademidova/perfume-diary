@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { supabase, allNotes, money, type Perfume, type Term } from './lib'
+import { buildModel, noteInsights } from './predict'
 
 function top<T extends string>(xs: T[], n = 5) {
   const m = new Map<T, number>()
@@ -28,6 +29,8 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
       spent: [...spent.entries()],
     }
   }, [perfumes])
+
+  const insight = useMemo(() => noteInsights(buildModel(perfumes)), [perfumes])
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), perfumes, terms }, null, 2)], { type: 'application/json' })
@@ -73,6 +76,29 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
           </section>
         ) : null
       ))}
+
+      {(insight.loved.length > 0 || insight.avoid.length > 0) && (
+        <section className="card">
+          <h2>Notes by my ratings</h2>
+          <p className="muted small">Notes that appear in 3+ rated perfumes. ★ is my average for them, ×n is how many.</p>
+          {insight.loved.length > 0 && (
+            <>
+              <p className="small"><b>I tend to like</b></p>
+              <div className="chips">
+                {insight.loved.map(n => <span key={n.note} className="chip note-stat good">{n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small></span>)}
+              </div>
+            </>
+          )}
+          {insight.avoid.length > 0 && (
+            <>
+              <p className="small"><b>I tend to avoid</b></p>
+              <div className="chips">
+                {insight.avoid.map(n => <span key={n.note} className="chip note-stat bad">{n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small></span>)}
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       {(stats.spent.length > 0 || stats.wishlist > 0) && (
         <section className="card">

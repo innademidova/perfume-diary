@@ -7,6 +7,7 @@ import {
 } from './lib'
 import { Stars, Scale, Meter, Chips, TagInput, Thumb, Field, Icon, LinksEditor, usePhotoUrls } from './ui'
 import { go, back } from './App'
+import { buildModel, clues } from './predict'
 
 export type Mode = 'tried' | 'wishlist'
 
@@ -266,8 +267,9 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
 
 // ---------- Картка аромату ----------
 
-export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }: {
+export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete, onNote }: {
   perfume: Perfume
+  perfumes: Perfume[]
   terms: Term[]
   onChange: (p: Perfume) => void
   onDelete: (id: string) => void
@@ -275,7 +277,8 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
 }) {
   const wish = isWish(p)
   const home = wish ? '/wishlist' : '/'
-  const urls = usePhotoUrls([p.photo_path])
+  const hint = useMemo(() => (wish || isToRate(p)) ? clues(buildModel(perfumes), p) : null, [perfumes, p, wish])
+  const urls = usePhotoUrls([p.photo_path, ...(hint?.similar.map(s => s.perfume.photo_path) ?? [])])
   const related = terms.filter(t => mentions(p, t))
   const total = p.price_per_ml != null && p.volume_ml ? p.price_per_ml * p.volume_ml : null
 
@@ -363,6 +366,43 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
           <button className="btn primary wide" onClick={() => go(`/p/${p.id}/edit`)}>
             <Icon name="edit" /> Rate it
           </button>
+        )}
+
+        {hint && (hint.similar.length > 0 || hint.notes.length > 0) && (
+          <section className="card">
+            <h2>Clues from my diary</h2>
+            {hint.similar.length > 0 && (
+              <>
+                <p className="muted small">Similar perfumes I've rated</p>
+                <ul className="plist compact">
+                  {hint.similar.map(({ perfume: s }) => (
+                    <li key={s.id}>
+                      <button className="prow" onClick={() => go(`/p/${s.id}`)}>
+                        <Thumb url={s.photo_path ? urls[s.photo_path] : undefined} name={s.name} />
+                        <div className="prow-body">
+                          <span className="prow-name">{s.name}</span>
+                          <div className="muted small">{s.brand}</div>
+                          <Stars value={s.rating} size="sm" />
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {hint.notes.length > 0 && (
+              <>
+                <p className="muted small">How I usually rate these notes</p>
+                <div className="chips">
+                  {hint.notes.map(n => (
+                    <span key={n.note} className={`chip note-stat ${n.n < 2 ? '' : n.delta >= 0.35 ? 'good' : n.delta <= -0.35 ? 'bad' : ''}`}>
+                      {n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small>
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
         )}
 
         {wish && reasonCard}

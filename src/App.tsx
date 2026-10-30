@@ -140,7 +140,7 @@ function Diary({ email }: { email: string }) {
     case 'perfume': {
       const p = findP(route.id)
       screen = p
-        ? <PerfumeDetail perfume={p} terms={terms} onChange={savePerfume} onDelete={dropPerfume}
+        ? <PerfumeDetail perfume={p} perfumes={perfumes} terms={terms} onChange={savePerfume} onDelete={dropPerfume}
             onNote={(note, mode) => {
               if (mode === 'wishlist') { setWishFilters({ ...emptyFilters, note }); go('/wishlist') }
               else { setFilters({ ...emptyFilters, note }); go('/') }

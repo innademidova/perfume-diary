@@ -634,3 +634,15 @@ a.link { color: var(--pink-ink); text-decoration: underline; }
 .segmented button span { font-weight: 500; opacity: .7; margin-left: 2px; }
 .segmented button.on { background: var(--surface-solid); color: var(--pink-ink); box-shadow: var(--shadow); }
 
+
+/* --- Статистика нот --- */
+
+.note-stat { font-size: 13px; }
+.note-stat b { font-weight: 700; margin-left: 2px; }
+.note-stat small { opacity: .6; }
+.note-stat.good { background: #e3f4ea; color: #2f7a4f; }
+.note-stat.bad { background: #fde4e4; color: #b2434b; }
+@media (prefers-color-scheme: dark) {
+  .note-stat.good { background: #1f3a2b; color: #9fd9b5; }
+  .note-stat.bad { background: #43232a; color: #f2a5ad; }
+}
