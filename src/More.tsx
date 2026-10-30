@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { supabase, allNotes, money, type Perfume, type Term } from './lib'
 import { buildModel, noteInsights } from './predict'
+import { ProfileCard, AccuracyCard } from './ai'
 
 function top<T extends string>(xs: T[], n = 5) {
   const m = new Map<T, number>()
@@ -76,6 +77,9 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
           </section>
         ) : null
       ))}
+
+      <ProfileCard ratedCount={stats.tried - perfumes.filter(p => p.status !== 'wishlist' && p.rating == null).length} />
+      <AccuracyCard perfumes={perfumes} />
 
       {(insight.loved.length > 0 || insight.avoid.length > 0) && (
         <section className="card">

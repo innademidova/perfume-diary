@@ -76,3 +76,37 @@ create policy "own photos" on storage.objects for all to authenticated
 alter table public.perfumes add column if not exists reason_source text;   -- friend, reels, tiktok, youtube, notes, review, store, other
 alter table public.perfumes add column if not exists reason_note   text;
 alter table public.perfumes add column if not exists links         jsonb not null default '[]'; -- [{ "url": "...", "label": "..." }]
+
+-- Прогнози ІІ: кнопка в застосунку ставить запит у чергу, Claude Code обробляє чергу
+create table if not exists public.predictions (
+  perfume_id   uuid primary key references public.perfumes(id) on delete cascade,
+  user_id      uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  status       text not null default 'queued',     -- queued, done
+  rating       numeric(2,1) check (rating between 0 and 5),
+  confidence   text,                               -- low, medium, high
+  summary      text,                               -- очікуваний відгук моїми словами
+  likes        text[] not null default '{}',       -- що, ймовірно, сподобається
+  risks        text[] not null default '{}',       -- що може не сподобатись
+  requested_at timestamptz not null default now(),
+  done_at      timestamptz
+);
+
+-- Профіль смаку: один рядок на користувача
+create table if not exists public.taste_profile (
+  user_id           uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  profile           text,
+  loves             text[] not null default '{}',
+  avoids            text[] not null default '{}',
+  based_on          int not null default 0,          -- скільки оцінених ароматів враховано
+  refresh_requested boolean not null default false,
+  updated_at        timestamptz not null default now()
+);
+
+alter table public.predictions enable row level security;
+alter table public.taste_profile enable row level security;
+drop policy if exists "own predictions" on public.predictions;
+create policy "own predictions" on public.predictions for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "own profile" on public.taste_profile;
+create policy "own profile" on public.taste_profile for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());

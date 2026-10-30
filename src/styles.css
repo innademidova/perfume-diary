@@ -646,3 +646,14 @@ a.link { color: var(--pink-ink); text-decoration: underline; }
   .note-stat.good { background: #1f3a2b; color: #9fd9b5; }
   .note-stat.bad { background: #43232a; color: #f2a5ad; }
 }
+
+/* --- Прогноз ІІ --- */
+
+.forecast { border: 1.5px solid transparent; background:
+  linear-gradient(var(--surface-solid), var(--surface-solid)) padding-box,
+  var(--gradient) border-box; }
+.forecast-head { display: flex; align-items: center; gap: 14px; }
+.ghost-stars { opacity: .75; }
+.forecast-num { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+.queued { font-weight: 600; color: var(--lilac-ink); }
+details summary { cursor: pointer; }

@@ -8,6 +8,7 @@ import {
 import { Stars, Scale, Meter, Chips, TagInput, Thumb, Field, Icon, LinksEditor, usePhotoUrls } from './ui'
 import { go, back } from './App'
 import { buildModel, clues } from './predict'
+import { ForecastCard } from './ai'
 
 export type Mode = 'tried' | 'wishlist'
 
@@ -367,6 +368,8 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
             <Icon name="edit" /> Rate it
           </button>
         )}
+
+        <ForecastCard perfume={p} />
 
         {hint && (hint.similar.length > 0 || hint.notes.length > 0) && (
           <section className="card">

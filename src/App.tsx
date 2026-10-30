@@ -5,6 +5,7 @@ import { Icon } from './ui'
 import { PerfumeList, PerfumeDetail, PerfumeForm, emptyFilters, isWish, type Filters } from './Perfumes'
 import { TermList, TermDetail, TermForm } from './Terms'
 import { More } from './More'
+import { AIContext, type Prediction, type TasteProfile } from './ai'
 
 // Маршрути в адресі після #, щоб працювало на GitHub Pages
 export type Route =
@@ -88,6 +89,8 @@ function Diary({ email }: { email: string }) {
   const [wishFilters, setWishFilters] = useState<Filters>(emptyFilters)
   const [termQuery, setTermQuery] = useState('')
   const [loadError, setLoadError] = useState('')
+  const [predictions, setPredictions] = useState<Map<string, Prediction>>(new Map())
+  const [profile, setProfile] = useState<TasteProfile | null>(null)
 
   useEffect(() => {
     const on = () => { setRoute(parse(location.hash)); window.scrollTo(0, 0) }
@@ -97,13 +100,17 @@ function Diary({ email }: { email: string }) {
 
   const load = useCallback(async () => {
     setLoadError('')
-    const [p, t] = await Promise.all([
+    const [p, t, pr, tp] = await Promise.all([
       supabase.from('perfumes').select('*').order('created_at', { ascending: false }),
       supabase.from('terms').select('*').order('name'),
+      supabase.from('predictions').select('*'),
+      supabase.from('taste_profile').select('*').maybeSingle(),
     ])
     if (p.error || t.error) { setLoadError((p.error ?? t.error)!.message); return }
     setPerfumes(p.data as Perfume[])
     setTerms(t.data as Term[])
+    setPredictions(new Map(((pr.data ?? []) as Prediction[]).map(x => [x.perfume_id, x])))
+    setProfile((tp.data as TasteProfile | null) ?? null)
   }, [])
   useEffect(() => { load() }, [load])
 
@@ -168,7 +175,14 @@ function Diary({ email }: { email: string }) {
   }
 
   const editing = route.view.endsWith('-edit')
+  const ai = {
+    predictions, profile, saveProfile: setProfile,
+    savePrediction: (x: Prediction | null, id: string) => setPredictions(m => {
+      const n = new Map(m); if (x) n.set(id, x); else n.delete(id); return n
+    }),
+  }
   return (
+    <AIContext.Provider value={ai}>
     <div className="app">
       <main className="screen">{screen}</main>
       {!editing && (
@@ -180,6 +194,7 @@ function Diary({ email }: { email: string }) {
         </nav>
       )}
     </div>
+    </AIContext.Provider>
   )
 }
 
