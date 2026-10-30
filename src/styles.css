@@ -657,3 +657,90 @@ a.link { color: var(--pink-ink); text-decoration: underline; }
 .forecast-num { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
 .queued { font-weight: 600; color: var(--lilac-ink); }
 details summary { cursor: pointer; }
+
+/* --- Плитка карток --- */
+
+.plist.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.plist.grid .prow { flex-direction: column; gap: 10px; height: 100%; }
+.plist.grid .thumb { width: 100%; height: auto; aspect-ratio: 4 / 5; border-radius: 16px; }
+.plist.grid .thumb-empty { font-size: 44px; }
+.plist.grid .prow-body { justify-content: flex-start; padding: 0 4px 4px; }
+.plist.grid .prow-name { font-size: 16px; }
+.tabbar-brand { display: none; }
+@media (max-width: 1099px) { .tabbar.editing { display: none; } }
+
+/* --- Планшет --- */
+
+@media (min-width: 700px) {
+  .screen { max-width: 960px; padding-left: 24px; padding-right: 24px; }
+  .page-head h1 { font-size: 38px; }
+  .plist.grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+  .filters .grid2 { grid-template-columns: repeat(3, 1fr); }
+  .tlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .form-head { margin-left: -24px; margin-right: -24px; padding-left: 20px; padding-right: 20px; }
+  /* вузькі сторінки: форма, словник, інсайти */
+  .screen.view-perfume-edit, .screen.view-term-edit, .screen.view-term, .screen.view-more { max-width: 760px; }
+}
+
+/* --- Картка аромату на широкому екрані: фото зліва, текст справа --- */
+
+@media (min-width: 900px) {
+  .detail {
+    margin: 0;
+    padding-top: 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    column-gap: 36px;
+    align-items: start;
+  }
+  .detail-bar, .detail-bar.static { position: static; grid-column: 1 / -1; padding: 0 0 12px; max-width: none; margin: 0; }
+  .detail-bar .btn-icon.glass { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+  .hero { position: sticky; top: 24px; border-radius: 28px; aspect-ratio: 1; box-shadow: var(--shadow); }
+  .hero-empty { aspect-ratio: 1; }
+  .detail-body { padding: 0; }
+  .detail-bar.static + .detail-body { grid-column: 1 / -1; max-width: 760px; }
+}
+
+/* --- Десктоп: бічне меню --- */
+
+@media (min-width: 1100px) {
+  .screen { max-width: 1180px; margin-left: 240px; margin-right: auto; padding: 32px 40px 48px; }
+  .screen.view-perfume-edit, .screen.view-term-edit, .screen.view-term, .screen.view-more { margin-left: 240px; }
+  .tabbar {
+    left: 0; top: 0; bottom: 0;
+    transform: none;
+    width: 220px;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 28px 14px;
+    border-radius: 0;
+    border-width: 0 1px 0 0;
+    box-shadow: none;
+  }
+  .tabbar-brand {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    padding: 0 12px 22px;
+    background: linear-gradient(120deg, var(--pink-ink), var(--blue-ink));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tabbar a { flex: none; flex-direction: row; gap: 12px; font-size: 15px; padding: 11px 14px; border-radius: 14px; }
+  .form-head { position: static; margin: 0 0 16px; padding: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .plist.grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
+  .prow { transition: transform .15s, box-shadow .15s; }
+  .prow:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(120, 90, 140, .06), 0 16px 40px rgba(120, 90, 140, .1); }
+}
+
+@media (min-width: 700px) and (max-width: 899px) {
+  .hero { max-height: 60vh; }
+  .detail-bar { max-width: 960px; }
+}

@@ -25,3 +25,8 @@
    written by Claude.
 10. **Agreed next:** AI autofill on the add form using Gemini (free) — waiting for her API key.
 11. She asked to keep full project context in the repo → this file, `CLAUDE.md`, `docs/INSIGHTS.md`.
+12. **Responsive layout** (she uses it on the computer too): grid of cards ⇄ list toggle (remembered per device;
+    default grid on ≥700px, list on phone), tablet layout, desktop ≥1100px with a left sidebar, perfume card in two
+    columns (sticky photo left) on ≥900px.
+13. **Gemini key received** for AI autofill. Notes: older models (2.5) are unavailable to new users; new models
+    work via the Interactions API (`POST /v1beta/interactions`, tools `[{"type":"google_search"}]`).

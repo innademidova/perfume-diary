@@ -184,9 +184,10 @@ function Diary({ email }: { email: string }) {
   return (
     <AIContext.Provider value={ai}>
     <div className="app">
-      <main className="screen">{screen}</main>
-      {!editing && (
-        <nav className="tabbar">
+      <main className={`screen view-${route.view}`}>{screen}</main>
+      {(
+        <nav className={`tabbar${editing ? ' editing' : ''}`}>
+          <span className="tabbar-brand">Perfume Diary</span>
           <a href="#/" className={tab === 'list' ? 'on' : ''}><Icon name="bottle" /><span>Perfumes</span></a>
           <a href="#/wishlist" className={tab === 'wishlist' ? 'on' : ''}><Icon name="bookmark" /><span>Want to try</span></a>
           <a href="#/terms" className={tab === 'terms' ? 'on' : ''}><Icon name="book" /><span>Glossary</span></a>

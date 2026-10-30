@@ -161,7 +161,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   )
 }
 
-export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'heart-fill' | 'search' | 'filter' | 'bottle' | 'book' | 'more' | 'camera' | 'trash' | 'close' | 'bookmark' | 'link' | 'check' | 'spark' }) {
+export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'heart-fill' | 'search' | 'filter' | 'bottle' | 'book' | 'more' | 'camera' | 'trash' | 'close' | 'bookmark' | 'link' | 'check' | 'spark' | 'grid' | 'list' }) {
   const p: Record<string, ReactNode> = {
     back: <path d="M15 5l-7 7 7 7" />,
     plus: <path d="M12 5v14M5 12h14" />,
@@ -178,6 +178,8 @@ export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'hea
     close: <path d="M6 6l12 12M18 6L6 18" />,
     bookmark: <path d="M7 4h10a1 1 0 011 1v15l-6-4-6 4V5a1 1 0 011-1z" />,
     link: <><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" /></>,
+    grid: <><rect x="4" y="4" width="7" height="7" rx="2" /><rect x="13" y="4" width="7" height="7" rx="2" /><rect x="4" y="13" width="7" height="7" rx="2" /><rect x="13" y="13" width="7" height="7" rx="2" /></>,
+    list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
     check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
     spark: <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" />,
   }

@@ -33,6 +33,18 @@ export const isWish = (p: Perfume) => p.status === 'wishlist'
 // Уже є, але ще без оцінки
 export const isToRate = (p: Perfume) => !isWish(p) && p.rating == null
 
+// Вигляд списку: плитка чи рядки. На телефоні за замовчуванням рядки, на ширших екранах — плитка
+function useLayout(): ['grid' | 'list', (v: 'grid' | 'list') => void] {
+  const [v, setV] = useState<'grid' | 'list'>(() => {
+    try {
+      const saved = localStorage.getItem('layout')
+      if (saved === 'grid' || saved === 'list') return saved
+    } catch { /* приватний режим */ }
+    return window.matchMedia('(min-width: 700px)').matches ? 'grid' : 'list'
+  })
+  return [v, (x) => { setV(x); try { localStorage.setItem('layout', x) } catch { /* ignore */ } }]
+}
+
 const uniq = (xs: (string | null | undefined)[]) =>
   [...new Set(xs.filter((x): x is string => !!x && !!x.trim()))].sort((a, b) => a.localeCompare(b, 'uk'))
 
@@ -46,6 +58,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
 }) {
   const wish = mode === 'wishlist'
   const [showFilters, setShowFilters] = useState(false)
+  const [layout, setLayout] = useLayout()
   const set = (patch: Partial<Filters>) => setFilters({ ...f, ...patch })
 
   const ownList = useMemo(() => all.filter(p => isWish(p) === wish), [all, wish])
@@ -125,6 +138,10 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
             <input type="search" placeholder={wish ? 'Name, brand, note, why…' : 'Name, brand, note, review…'}
               value={f.q} onChange={e => set({ q: e.target.value })} />
           </div>
+          <button className="btn-icon" onClick={() => setLayout(layout === 'grid' ? 'list' : 'grid')}
+            aria-label={layout === 'grid' ? 'Show as list' : 'Show as grid'} title={layout === 'grid' ? 'List' : 'Grid'}>
+            <Icon name={layout === 'grid' ? 'list' : 'grid'} />
+          </button>
           <button className={`btn-icon${showFilters || active.length ? ' on' : ''}`} onClick={() => setShowFilters(s => !s)} aria-label="Filters">
             <Icon name="filter" />{active.length > 0 && <span className="badge">{active.length}</span>}
           </button>
@@ -230,7 +247,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
       ) : shown.length === 0 ? (
         <div className="empty"><p className="muted">Nothing found</p></div>
       ) : (
-        <ul className="plist">
+        <ul className={`plist ${layout}`}>
           {shown.map(p => (
             <li key={p.id}>
               <button className="prow" onClick={() => go(`/p/${p.id}`)}>
