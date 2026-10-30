@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { norm, photoUrls } from './lib'
+import { norm, photoUrls, type Link } from './lib'
 
 export function Stars({ value, onChange, size = 'md' }: {
   value: number | null
@@ -161,7 +161,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   )
 }
 
-export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'heart-fill' | 'search' | 'filter' | 'bottle' | 'book' | 'more' | 'camera' | 'trash' | 'close' }) {
+export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'heart-fill' | 'search' | 'filter' | 'bottle' | 'book' | 'more' | 'camera' | 'trash' | 'close' | 'bookmark' | 'link' | 'check' }) {
   const p: Record<string, ReactNode> = {
     back: <path d="M15 5l-7 7 7 7" />,
     plus: <path d="M12 5v14M5 12h14" />,
@@ -176,9 +176,38 @@ export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'hea
     camera: <><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></>,
     trash: <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" />,
     close: <path d="M6 6l12 12M18 6L6 18" />,
+    bookmark: <path d="M7 4h10a1 1 0 011 1v15l-6-4-6 4V5a1 1 0 011-1z" />,
+    link: <><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" /></>,
+    check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   }
   return (
     <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{p[name]}</svg>
+  )
+}
+
+export function LinksEditor({ value, onChange }: { value: Link[]; onChange: (v: Link[]) => void }) {
+  const rows = value.length ? value : [{ url: '', label: '' }]
+  const update = (i: number, patch: Partial<Link>) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  return (
+    <div className="links-edit">
+      {rows.map((l, i) => (
+        <div className="link-row" key={i}>
+          <div className="link-inputs">
+            <input value={l.url} onChange={e => update(i, { url: e.target.value })} placeholder="https://…"
+              inputMode="url" autoCapitalize="none" autoCorrect="off" />
+            <input value={l.label} onChange={e => update(i, { label: e.target.value })} placeholder="Label (optional), e.g. decant shop" />
+          </div>
+          {(rows.length > 1 || l.url || l.label) && (
+            <button type="button" className="btn-icon" aria-label="Remove link"
+              onClick={() => onChange(rows.filter((_, j) => j !== i))}><Icon name="close" /></button>
+          )}
+        </div>
+      ))}
+      <button type="button" className="btn sm add-link" onClick={() => onChange([...rows, { url: '', label: '' }])}>
+        <Icon name="plus" /> Add another link
+      </button>
+    </div>
   )
 }

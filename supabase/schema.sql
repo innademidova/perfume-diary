@@ -71,3 +71,8 @@ drop policy if exists "own photos" on storage.objects;
 create policy "own photos" on storage.objects for all to authenticated
   using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text)
   with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Хочу спробувати: звідки дізналась і де спробувати
+alter table public.perfumes add column if not exists reason_source text;   -- friend, reels, tiktok, youtube, notes, review, store, other
+alter table public.perfumes add column if not exists reason_note   text;
+alter table public.perfumes add column if not exists links         jsonb not null default '[]'; -- [{ "url": "...", "label": "..." }]

@@ -1,11 +1,14 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import {
-  supabase, allNotes, mentions, money, formatDate, norm, uploadPhoto, removePhoto,
-  FAMILIES, CONCENTRATIONS, COMMON_NOTES, STATUSES, SEASONS, DAYTIME, WOULD_BUY, LONGEVITY, SILLAGE,
+  supabase, allNotes, mentions, money, formatDate, norm, uploadPhoto, removePhoto, linkTitle, cleanLinks,
+  FAMILIES, CONCENTRATIONS, COMMON_NOTES, STATUSES, TRIED_STATUSES, REASONS, REASONS_SHORT,
+  SEASONS, DAYTIME, WOULD_BUY, LONGEVITY, SILLAGE,
   type Perfume, type Term,
 } from './lib'
-import { Stars, Scale, Meter, Chips, TagInput, Thumb, Field, Icon, usePhotoUrls } from './ui'
+import { Stars, Scale, Meter, Chips, TagInput, Thumb, Field, Icon, LinksEditor, usePhotoUrls } from './ui'
 import { go, back } from './App'
+
+export type Mode = 'tried' | 'wishlist'
 
 export type Filters = {
   q: string
@@ -14,34 +17,41 @@ export type Filters = {
   note: string
   minRating: number
   season: string
+  source: string
   favorite: boolean
   sort: 'new' | 'rating' | 'price' | 'name' | 'tried'
 }
 export const emptyFilters: Filters = {
-  q: '', family: '', status: '', note: '', minRating: 0, season: '', favorite: false, sort: 'new',
+  q: '', family: '', status: '', note: '', minRating: 0, season: '', source: '', favorite: false, sort: 'new',
 }
 
+export const isWish = (p: Perfume) => p.status === 'wishlist'
+
 const uniq = (xs: (string | null | undefined)[]) =>
-  [...new Set(xs.filter((x): x is string => !!x && !!x.trim()))].sort((a, b) => a.localeCompare(b, 'ru'))
+  [...new Set(xs.filter((x): x is string => !!x && !!x.trim()))].sort((a, b) => a.localeCompare(b, 'uk'))
 
 // ---------- Список ----------
 
-export function PerfumeList({ perfumes, filters: f, setFilters }: {
+export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
+  mode: Mode
   perfumes: Perfume[]
   filters: Filters
   setFilters: (f: Filters) => void
 }) {
+  const wish = mode === 'wishlist'
   const [showFilters, setShowFilters] = useState(false)
   const set = (patch: Partial<Filters>) => setFilters({ ...f, ...patch })
 
+  const perfumes = useMemo(() => all.filter(p => isWish(p) === wish), [all, wish])
   const families = useMemo(() => uniq(perfumes.map(p => p.family)), [perfumes])
   const notes = useMemo(() => uniq(perfumes.flatMap(allNotes)), [perfumes])
+  const newPath = wish ? '/w/new' : '/p/new'
 
   const shown = useMemo(() => {
     const q = norm(f.q)
     const list = perfumes.filter(p => {
       if (q) {
-        const hay = norm([p.name, p.brand, p.perfumer, p.family, p.review, p.concentration, ...allNotes(p)].join(' '))
+        const hay = norm([p.name, p.brand, p.perfumer, p.family, p.review, p.reason_note, p.concentration, ...allNotes(p)].join(' '))
         if (!q.split(/\s+/).every(w => hay.includes(w))) return false
       }
       if (f.family && p.family !== f.family) return false
@@ -49,6 +59,7 @@ export function PerfumeList({ perfumes, filters: f, setFilters }: {
       if (f.note && !allNotes(p).some(n => norm(n) === norm(f.note))) return false
       if (f.minRating && (p.rating ?? 0) < f.minRating) return false
       if (f.season && !p.seasons.includes(f.season)) return false
+      if (f.source && p.reason_source !== f.source) return false
       if (f.favorite && !p.favorite) return false
       return true
     })
@@ -56,7 +67,7 @@ export function PerfumeList({ perfumes, filters: f, setFilters }: {
       new: (a, b) => b.created_at.localeCompare(a.created_at),
       rating: (a, b) => (b.rating ?? -1) - (a.rating ?? -1),
       price: (a, b) => (b.price_per_ml ?? -1) - (a.price_per_ml ?? -1),
-      name: (a, b) => a.name.localeCompare(b.name, 'ru'),
+      name: (a, b) => a.name.localeCompare(b.name, 'uk'),
       tried: (a, b) => (b.tried_on ?? '').localeCompare(a.tried_on ?? ''),
     }
     return list.sort(by[f.sort])
@@ -69,23 +80,25 @@ export function PerfumeList({ perfumes, filters: f, setFilters }: {
   if (f.note) active.push(['note', `note: ${f.note}`])
   if (f.minRating) active.push(['minRating', `${f.minRating}★ and up`])
   if (f.season) active.push(['season', SEASONS[f.season]])
+  if (f.source) active.push(['source', REASONS_SHORT[f.source]])
   if (f.favorite) active.push(['favorite', 'favourites'])
 
   return (
     <>
       <header className="page-head">
         <div>
-          <h1>Perfumes</h1>
+          <h1>{wish ? 'Want to try' : 'Perfumes'}</h1>
           <p className="muted small">{perfumes.length ? `${shown.length} of ${perfumes.length}` : 'nothing here yet'}</p>
         </div>
-        <button className="btn-icon accent" onClick={() => go('/p/new')} aria-label="Add perfume"><Icon name="plus" /></button>
+        <button className="btn-icon accent" onClick={() => go(newPath)} aria-label="Add perfume"><Icon name="plus" /></button>
       </header>
 
       {perfumes.length > 0 && (
         <div className="toolbar">
           <div className="search">
             <Icon name="search" />
-            <input type="search" placeholder="Name, brand, note, review…" value={f.q} onChange={e => set({ q: e.target.value })} />
+            <input type="search" placeholder={wish ? 'Name, brand, note, why…' : 'Name, brand, note, review…'}
+              value={f.q} onChange={e => set({ q: e.target.value })} />
           </div>
           <button className={`btn-icon${showFilters || active.length ? ' on' : ''}`} onClick={() => setShowFilters(s => !s)} aria-label="Filters">
             <Icon name="filter" />{active.length > 0 && <span className="badge">{active.length}</span>}
@@ -108,37 +121,50 @@ export function PerfumeList({ perfumes, filters: f, setFilters }: {
                 {notes.map(x => <option key={x}>{x}</option>)}
               </select>
             </Field>
-            <Field label="Status">
-              <select value={f.status} onChange={e => set({ status: e.target.value })}>
-                <option value="">any</option>
-                {Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </Field>
-            <Field label="Season">
-              <select value={f.season} onChange={e => set({ season: e.target.value })}>
-                <option value="">any</option>
-                {Object.entries(SEASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </Field>
-            <Field label="Min rating">
-              <select value={f.minRating} onChange={e => set({ minRating: Number(e.target.value) })}>
-                <option value={0}>any</option>
-                {[2, 3, 3.5, 4, 4.5, 5].map(x => <option key={x} value={x}>{x} ★</option>)}
-              </select>
-            </Field>
+            {wish ? (
+              <Field label="Found it via">
+                <select value={f.source} onChange={e => set({ source: e.target.value })}>
+                  <option value="">anywhere</option>
+                  {Object.entries(REASONS_SHORT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </Field>
+            ) : (
+              <>
+                <Field label="Status">
+                  <select value={f.status} onChange={e => set({ status: e.target.value })}>
+                    <option value="">any</option>
+                    {Object.entries(TRIED_STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </Field>
+                <Field label="Season">
+                  <select value={f.season} onChange={e => set({ season: e.target.value })}>
+                    <option value="">any</option>
+                    {Object.entries(SEASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </Field>
+                <Field label="Min rating">
+                  <select value={f.minRating} onChange={e => set({ minRating: Number(e.target.value) })}>
+                    <option value={0}>any</option>
+                    {[2, 3, 3.5, 4, 4.5, 5].map(x => <option key={x} value={x}>{x} ★</option>)}
+                  </select>
+                </Field>
+              </>
+            )}
             <Field label="Sort by">
               <select value={f.sort} onChange={e => set({ sort: e.target.value as Filters['sort'] })}>
                 <option value="new">newest first</option>
-                <option value="tried">date tried</option>
-                <option value="rating">rating</option>
-                <option value="price">price per ml</option>
+                {!wish && <option value="tried">date tried</option>}
+                {!wish && <option value="rating">rating</option>}
+                {!wish && <option value="price">price per ml</option>}
                 <option value="name">name</option>
               </select>
             </Field>
           </div>
-          <label className="check">
-            <input type="checkbox" checked={f.favorite} onChange={e => set({ favorite: e.target.checked })} /> Favourites only
-          </label>
+          {!wish && (
+            <label className="check">
+              <input type="checkbox" checked={f.favorite} onChange={e => set({ favorite: e.target.checked })} /> Favourites only
+            </label>
+          )}
         </div>
       )}
 
@@ -152,11 +178,19 @@ export function PerfumeList({ perfumes, filters: f, setFilters }: {
       )}
 
       {perfumes.length === 0 ? (
-        <div className="empty">
-          <p className="serif big">Your perfumes will live here</p>
-          <p className="muted">Start with the decant you're wearing right now</p>
-          <button className="btn primary" onClick={() => go('/p/new')}>Add your first perfume</button>
-        </div>
+        wish ? (
+          <div className="empty">
+            <p className="big">Nothing on your list yet</p>
+            <p className="muted">Save perfumes you've heard about: from a friend, a reel, or just because of the notes</p>
+            <button className="btn primary" onClick={() => go(newPath)}>Add a perfume to try</button>
+          </div>
+        ) : (
+          <div className="empty">
+            <p className="big">Your perfumes will live here</p>
+            <p className="muted">Start with the decant you're wearing right now</p>
+            <button className="btn primary" onClick={() => go(newPath)}>Add your first perfume</button>
+          </div>
+        )
       ) : shown.length === 0 ? (
         <div className="empty"><p className="muted">Nothing found</p></div>
       ) : (
@@ -172,10 +206,19 @@ export function PerfumeList({ perfumes, filters: f, setFilters }: {
                   </div>
                   <div className="muted small">{[p.brand, p.family].filter(Boolean).join(' · ')}</div>
                   <div className="prow-meta">
-                    {p.rating != null ? <Stars value={p.rating} size="sm" /> : <span className="muted small">not rated</span>}
-                    {p.status === 'wishlist'
-                      ? <span className="pill">wishlist</span>
-                      : p.price_per_ml != null && <span className="small muted">{money(p.price_per_ml, p.currency)}/ml</span>}
+                    {wish ? (
+                      <>
+                        {p.reason_source && <span className="pill">{REASONS_SHORT[p.reason_source]}</span>}
+                        {p.links.length > 0 && (
+                          <span className="small muted with-icon"><Icon name="link" />{p.links.length === 1 ? '1 link' : `${p.links.length} links`}</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {p.rating != null ? <Stars value={p.rating} size="sm" /> : <span className="muted small">not rated</span>}
+                        {p.price_per_ml != null && <span className="small muted">{money(p.price_per_ml, p.currency)}/ml</span>}
+                      </>
+                    )}
                   </div>
                 </div>
               </button>
@@ -194,8 +237,10 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
   terms: Term[]
   onChange: (p: Perfume) => void
   onDelete: (id: string) => void
-  onNote: (note: string) => void
+  onNote: (note: string, mode: Mode) => void
 }) {
+  const wish = isWish(p)
+  const home = wish ? '/wishlist' : '/'
   const urls = usePhotoUrls([p.photo_path])
   const related = terms.filter(t => mentions(p, t))
   const total = p.price_per_ml != null && p.volume_ml ? p.price_per_ml * p.volume_ml : null
@@ -210,20 +255,45 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
     if (error) { alert(error.message); return }
     await removePhoto(p.photo_path)
     onDelete(p.id)
-    back('/')
+    back(home)
   }
 
   const pyramid: [string, string[]][] = [['Top', p.top_notes], ['Heart', p.heart_notes], ['Base', p.base_notes]]
   const hasPyramid = pyramid.some(([, n]) => n.length)
+  const hasReason = !!(p.reason_source || p.reason_note)
+
+  const reasonCard = hasReason && (
+    <section className="card">
+      <h2>{wish ? 'Why I want to try it' : 'Why I wanted to try it'}</h2>
+      {p.reason_source && <span className="pill reason-pill">{REASONS[p.reason_source]}</span>}
+      {p.reason_note && <p className="review">{p.reason_note}</p>}
+    </section>
+  )
+  const linksCard = p.links.length > 0 && (
+    <section className="card">
+      <h2>{wish ? 'Where to try' : 'Links'}</h2>
+      <ul className="links">
+        {p.links.map((l, i) => (
+          <li key={i}>
+            <a href={l.url} target="_blank" rel="noopener noreferrer">
+              <Icon name="link" /><span>{linkTitle(l)}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
 
   return (
     <article className="detail">
       <div className="detail-bar">
-        <button className="btn-icon glass" onClick={() => back('/')} aria-label="Back"><Icon name="back" /></button>
+        <button className="btn-icon glass" onClick={() => back(home)} aria-label="Back"><Icon name="back" /></button>
         <div className="row">
-          <button className="btn-icon glass" onClick={toggleFav} aria-label="Favourite">
-            <Icon name={p.favorite ? 'heart-fill' : 'heart'} />
-          </button>
+          {!wish && (
+            <button className="btn-icon glass" onClick={toggleFav} aria-label="Favourite">
+              <Icon name={p.favorite ? 'heart-fill' : 'heart'} />
+            </button>
+          )}
           <button className="btn-icon glass" onClick={() => go(`/p/${p.id}/edit`)} aria-label="Edit"><Icon name="edit" /></button>
         </div>
       </div>
@@ -237,16 +307,27 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
         <h1 className="detail-title">{p.name}</h1>
         <p className="muted">{[p.concentration, p.year, p.perfumer && `by ${p.perfumer}`].filter(Boolean).join(' · ')}</p>
 
-        <div className="detail-rating">
-          {p.rating != null
-            ? <><Stars value={p.rating} size="lg" /><span className="serif">{String(p.rating)}</span></>
-            : <span className="muted">not rated</span>}
-        </div>
+        {!wish && (
+          <div className="detail-rating">
+            {p.rating != null
+              ? <><Stars value={p.rating} size="lg" /><span className="serif">{String(p.rating)}</span></>
+              : <span className="muted">not rated</span>}
+          </div>
+        )}
 
         <div className="chips">
           <span className="pill">{STATUSES[p.status]}</span>
           {p.family && <span className="pill soft">{p.family}</span>}
         </div>
+
+        {wish && (
+          <button className="btn primary wide" onClick={() => go(`/p/${p.id}/tried`)}>
+            <Icon name="check" /> I tried it
+          </button>
+        )}
+
+        {wish && reasonCard}
+        {wish && linksCard}
 
         {hasPyramid && (
           <section className="card">
@@ -255,7 +336,7 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
               <div className="pyr-row" key={label}>
                 <span className="pyr-label">{label}</span>
                 <div className="chips">
-                  {notes.map(n => <button key={n} className="chip" onClick={() => onNote(n)}>{n}</button>)}
+                  {notes.map(n => <button key={n} className="chip" onClick={() => onNote(n, wish ? 'wishlist' : 'tried')}>{n}</button>)}
                 </div>
               </div>
             ))}
@@ -283,6 +364,9 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
           </section>
         )}
 
+        {!wish && linksCard}
+        {!wish && reasonCard}
+
         {related.length > 0 && (
           <section className="card">
             <h2>From my glossary</h2>
@@ -303,8 +387,8 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
           <section className="card">
             <dl className="facts">
               {p.price_per_ml != null && <><dt>Price</dt><dd>{money(p.price_per_ml, p.currency)} per ml</dd></>}
-              {total != null && <><dt>{p.status === 'bottle' ? 'Bottle' : 'Decant'}</dt><dd>{p.volume_ml} ml · {money(total, p.currency)}</dd></>}
-              {p.tried_on && <><dt>Tried on</dt><dd>{formatDate(p.tried_on)}</dd></>}
+              {total != null && !wish && <><dt>{p.status === 'bottle' ? 'Bottle' : 'Decant'}</dt><dd>{p.volume_ml} ml · {money(total, p.currency)}</dd></>}
+              {p.tried_on && !wish && <><dt>Tried on</dt><dd>{formatDate(p.tried_on)}</dd></>}
             </dl>
           </section>
         )}
@@ -322,17 +406,21 @@ type Draft = Omit<Perfume, 'id' | 'created_at' | 'updated_at' | 'year' | 'price_
   year: string; price_per_ml: string; volume_ml: string
 }
 
+const today = () => new Date().toISOString().slice(0, 10)
+
 const blank: Draft = {
   name: '', brand: '', perfumer: '', year: '', concentration: '', family: '',
   top_notes: [], heart_notes: [], base_notes: [], price_per_ml: '', currency: '₴', volume_ml: '3',
   status: 'decant', rating: null, longevity: null, sillage: null, seasons: [], daytime: [],
-  would_buy: null, tried_on: new Date().toISOString().slice(0, 10), review: '', photo_path: null, favorite: false,
+  would_buy: null, tried_on: today(), review: '', photo_path: null, favorite: false,
+  reason_source: null, reason_note: '', links: [],
 }
+const blankWish: Draft = { ...blank, status: 'wishlist', tried_on: null, volume_ml: '' }
 
 const toDraft = (p: Perfume): Draft => ({
   ...p,
   brand: p.brand ?? '', perfumer: p.perfumer ?? '', concentration: p.concentration ?? '', family: p.family ?? '',
-  review: p.review ?? '', year: p.year?.toString() ?? '',
+  review: p.review ?? '', reason_note: p.reason_note ?? '', year: p.year?.toString() ?? '',
   price_per_ml: p.price_per_ml?.toString() ?? '', volume_ml: p.volume_ml?.toString() ?? '',
 })
 
@@ -341,12 +429,18 @@ const num = (s: string) => {
   return Number.isFinite(v) ? v : null
 }
 
-export function PerfumeForm({ perfume, perfumes, onSaved }: {
+export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved }: {
   perfume?: Perfume
   perfumes: Perfume[]
+  wish?: boolean      // новий запис у «Хочу спробувати»
+  convert?: boolean   // переносимо з «Хочу спробувати» у спробувані
   onSaved: (p: Perfume) => void
 }) {
-  const [d, setD] = useState<Draft>(() => perfume ? toDraft(perfume) : blank)
+  const [d, setD] = useState<Draft>(() => {
+    if (!perfume) return newWish ? blankWish : blank
+    const draft = toDraft(perfume)
+    return convert ? { ...draft, status: 'decant', tried_on: today(), volume_ml: draft.volume_ml || '3' } : draft
+  })
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [dropPhoto, setDropPhoto] = useState(false)
@@ -354,6 +448,7 @@ export function PerfumeForm({ perfume, perfumes, onSaved }: {
   const [error, setError] = useState('')
   const set = (patch: Partial<Draft>) => setD(x => ({ ...x, ...patch }))
   const urls = usePhotoUrls([perfume?.photo_path ?? null])
+  const wish = d.status === 'wishlist'
 
   const brands = useMemo(() => uniq(perfumes.map(p => p.brand)), [perfumes])
   const families = useMemo(() => uniq([...FAMILIES, ...perfumes.map(p => p.family)]), [perfumes])
@@ -367,6 +462,7 @@ export function PerfumeForm({ perfume, perfumes, onSaved }: {
   const currentPhoto = preview ?? (!dropPhoto && perfume?.photo_path ? urls[perfume.photo_path] : null)
 
   const price = num(d.price_per_ml), vol = num(d.volume_ml)
+  const cancelTo = perfume ? `/p/${perfume.id}` : wish ? '/wishlist' : '/'
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -380,7 +476,8 @@ export function PerfumeForm({ perfume, perfumes, onSaved }: {
         name: d.name.trim(),
         brand: d.brand?.trim() || null, perfumer: d.perfumer?.trim() || null,
         concentration: d.concentration || null, family: d.family?.trim() || null,
-        review: d.review?.trim() || null, tried_on: d.tried_on || null,
+        review: d.review?.trim() || null, reason_note: d.reason_note?.trim() || null,
+        tried_on: wish ? null : d.tried_on || null, links: cleanLinks(d.links),
         year: num(d.year), price_per_ml: price, volume_ml: vol, photo_path,
       }
       const q = perfume
@@ -398,11 +495,28 @@ export function PerfumeForm({ perfume, perfumes, onSaved }: {
     }
   }
 
+  const title = convert ? 'How was it?' : perfume ? 'Edit perfume' : wish ? 'Want to try' : 'New perfume'
+
+  const reasonFields = (
+    <>
+      <Field label="Where did I hear about it?">
+        <select value={d.reason_source ?? ''} onChange={e => set({ reason_source: e.target.value || null })}>
+          <option value="">—</option>
+          {Object.entries(REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+      </Field>
+      <Field label="Details">
+        <textarea rows={3} value={d.reason_note ?? ''} onChange={e => set({ reason_note: e.target.value })}
+          placeholder="Who recommended it, which reel, what caught my eye in the notes…" />
+      </Field>
+    </>
+  )
+
   return (
     <form className="form" onSubmit={submit}>
       <header className="form-head">
-        <button type="button" className="btn ghost" onClick={() => back(perfume ? `/p/${perfume.id}` : '/')}>Cancel</button>
-        <h1>{perfume ? 'Edit perfume' : 'New perfume'}</h1>
+        <button type="button" className="btn ghost" onClick={() => back(cancelTo)}>Cancel</button>
+        <h1>{title}</h1>
         <button className="btn primary sm" disabled={busy}>{busy ? '…' : 'Save'}</button>
       </header>
 
@@ -447,6 +561,20 @@ export function PerfumeForm({ perfume, perfumes, onSaved }: {
         </Field>
       </section>
 
+      {wish && (
+        <section className="card">
+          <h2>Why I want to try it</h2>
+          {reasonFields}
+        </section>
+      )}
+
+      {wish && (
+        <section className="card">
+          <h2>Where to try</h2>
+          <LinksEditor value={d.links} onChange={v => set({ links: v })} />
+        </section>
+      )}
+
       <section className="card">
         <h2>Notes</h2>
         <p className="muted small">Separate with a comma or Enter</p>
@@ -461,47 +589,61 @@ export function PerfumeForm({ perfume, perfumes, onSaved }: {
         </Field>
       </section>
 
-      <section className="card">
-        <h2>Impression</h2>
-        <Field label="Rating" hint="Tap a star again for a half star">
-          <Stars value={d.rating} onChange={v => set({ rating: v })} size="lg" />
-        </Field>
-        <Field label="Longevity"><Scale value={d.longevity} onChange={v => set({ longevity: v })} labels={LONGEVITY} /></Field>
-        <Field label="Sillage"><Scale value={d.sillage} onChange={v => set({ sillage: v })} labels={SILLAGE} /></Field>
-        <Field label="Season"><Chips multi options={SEASONS} value={d.seasons} onChange={v => set({ seasons: v })} /></Field>
-        <Field label="Time of day"><Chips multi options={DAYTIME} value={d.daytime} onChange={v => set({ daytime: v })} /></Field>
-        <Field label="Would I buy a bottle?">
-          <Chips options={WOULD_BUY} value={d.would_buy ? [d.would_buy] : []} onChange={v => set({ would_buy: v[0] ?? null })} />
-        </Field>
-        <Field label="My review">
-          <textarea rows={6} value={d.review ?? ''} onChange={e => set({ review: e.target.value })}
-            placeholder="How it opens, what it reminds you of, how it wears on skin…" />
-        </Field>
-      </section>
+      {!wish && (
+        <>
+          <section className="card">
+            <h2>Impression</h2>
+            <Field label="Rating" hint="Tap a star again for a half star">
+              <Stars value={d.rating} onChange={v => set({ rating: v })} size="lg" />
+            </Field>
+            <Field label="Longevity"><Scale value={d.longevity} onChange={v => set({ longevity: v })} labels={LONGEVITY} /></Field>
+            <Field label="Sillage"><Scale value={d.sillage} onChange={v => set({ sillage: v })} labels={SILLAGE} /></Field>
+            <Field label="Season"><Chips multi options={SEASONS} value={d.seasons} onChange={v => set({ seasons: v })} /></Field>
+            <Field label="Time of day"><Chips multi options={DAYTIME} value={d.daytime} onChange={v => set({ daytime: v })} /></Field>
+            <Field label="Would I buy a bottle?">
+              <Chips options={WOULD_BUY} value={d.would_buy ? [d.would_buy] : []} onChange={v => set({ would_buy: v[0] ?? null })} />
+            </Field>
+            <Field label="My review">
+              <textarea rows={6} value={d.review ?? ''} onChange={e => set({ review: e.target.value })}
+                placeholder="How it opens, what it reminds you of, how it wears on skin…" />
+            </Field>
+            <Field label="Links" hint="Reviews, shops, videos — anything worth keeping">
+              <LinksEditor value={d.links} onChange={v => set({ links: v })} />
+            </Field>
+          </section>
 
-      <section className="card">
-        <h2>Purchase</h2>
-        <Field label="Status">
-          <Chips options={STATUSES} value={[d.status]} onChange={v => v[0] && set({ status: v[0] })} />
-        </Field>
-        <div className="grid3">
-          <Field label="Price per ml">
-            <input inputMode="decimal" value={d.price_per_ml} onChange={e => set({ price_per_ml: e.target.value })} />
-          </Field>
-          <Field label="Currency">
-            <select value={d.currency} onChange={e => set({ currency: e.target.value })}>
-              {['₴', '$', '€', 'zł', '₽'].map(c => <option key={c}>{c}</option>)}
-            </select>
-          </Field>
-          <Field label="Volume, ml">
-            <input inputMode="decimal" value={d.volume_ml} onChange={e => set({ volume_ml: e.target.value })} />
-          </Field>
-        </div>
-        {price != null && vol != null && <p className="muted small">Total: {money(price * vol, d.currency)}</p>}
-        <Field label="Date tried">
-          <input type="date" value={d.tried_on ?? ''} onChange={e => set({ tried_on: e.target.value })} />
-        </Field>
-      </section>
+          <section className="card">
+            <h2>Purchase</h2>
+            <Field label="Status">
+              <Chips options={TRIED_STATUSES} value={[d.status]} onChange={v => v[0] && set({ status: v[0] })} />
+            </Field>
+            <div className="grid3">
+              <Field label="Price per ml">
+                <input inputMode="decimal" value={d.price_per_ml} onChange={e => set({ price_per_ml: e.target.value })} />
+              </Field>
+              <Field label="Currency">
+                <select value={d.currency} onChange={e => set({ currency: e.target.value })}>
+                  {['₴', '$', '€', 'zł'].map(c => <option key={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label="Volume, ml">
+                <input inputMode="decimal" value={d.volume_ml} onChange={e => set({ volume_ml: e.target.value })} />
+              </Field>
+            </div>
+            {price != null && vol != null && <p className="muted small">Total: {money(price * vol, d.currency)}</p>}
+            <Field label="Date tried">
+              <input type="date" value={d.tried_on ?? ''} onChange={e => set({ tried_on: e.target.value })} />
+            </Field>
+          </section>
+
+          {(d.reason_source || d.reason_note) && (
+            <section className="card">
+              <h2>Why I wanted to try it</h2>
+              {reasonFields}
+            </section>
+          )}
+        </>
+      )}
 
       <button className="btn primary wide" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
     </form>

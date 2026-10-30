@@ -31,9 +31,14 @@ export type Perfume = {
   review: string | null
   photo_path: string | null
   favorite: boolean
+  reason_source: string | null
+  reason_note: string | null
+  links: Link[]
   created_at: string
   updated_at: string
 }
+
+export type Link = { url: string; label: string }
 
 export type Term = {
   id: string
@@ -69,6 +74,25 @@ export const COMMON_NOTES = [
 export const STATUSES: Record<string, string> = {
   decant: 'Decant', sample: 'Sample', bottle: 'Bottle', wishlist: 'Want to try',
 }
+// Статуси для ароматів, які вже спробувала (без «хочу спробувати»)
+export const TRIED_STATUSES: Record<string, string> = {
+  decant: 'Decant', sample: 'Sample', bottle: 'Bottle',
+}
+export const REASONS: Record<string, string> = {
+  friend: 'Someone recommended it',
+  reels: 'Instagram Reels',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  notes: 'I like the notes',
+  review: 'Review or blog',
+  store: 'Smelled it in a store',
+  other: 'Other',
+}
+export const REASONS_SHORT: Record<string, string> = {
+  friend: 'Recommended', reels: 'Reels', tiktok: 'TikTok', youtube: 'YouTube',
+  notes: 'The notes', review: 'Review', store: 'Store', other: 'Other',
+}
+
 export const SEASONS: Record<string, string> = {
   spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter',
 }
@@ -92,6 +116,18 @@ export function mentions(p: Perfume, t: Term) {
   if (name.length < 2) return false
   const hay = norm([...allNotes(p), p.review ?? '', p.family ?? '', p.perfumer ?? ''].join(' | '))
   return hay.includes(name)
+}
+
+export function linkTitle(l: Link) {
+  if (l.label.trim()) return l.label.trim()
+  try { return new URL(l.url).hostname.replace(/^www\./, '') } catch { return l.url }
+}
+
+export function cleanLinks(links: Link[]): Link[] {
+  return links
+    .map(l => ({ url: l.url.trim(), label: l.label.trim() }))
+    .filter(l => l.url)
+    .map(l => ({ ...l, url: /^https?:\/\//i.test(l.url) ? l.url : `https://${l.url}` }))
 }
 
 export function money(v: number | null | undefined, cur: string) {

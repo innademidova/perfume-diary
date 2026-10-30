@@ -78,7 +78,7 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
         <section className="card">
           <dl className="facts">
             {stats.spent.length > 0 && <><dt>Spent</dt><dd>{stats.spent.map(([c, v]) => money(Math.round(v), c)).join(' + ')}</dd></>}
-            {stats.wishlist > 0 && <><dt>Want to try</dt><dd>{stats.wishlist}</dd></>}
+            {stats.wishlist > 0 && <><dt>Want to try</dt><dd><a className="link" href="#/wishlist">{stats.wishlist}</a></dd></>}
           </dl>
         </section>
       )}

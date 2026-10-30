@@ -2,19 +2,23 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, type Perfume, type Term } from './lib'
 import { Icon } from './ui'
-import { PerfumeList, PerfumeDetail, PerfumeForm, emptyFilters, type Filters } from './Perfumes'
+import { PerfumeList, PerfumeDetail, PerfumeForm, emptyFilters, isWish, type Filters } from './Perfumes'
 import { TermList, TermDetail, TermForm } from './Terms'
 import { More } from './More'
 
 // Маршрути в адресі після #, щоб працювало на GitHub Pages
 export type Route =
-  | { view: 'list' } | { view: 'perfume'; id: string } | { view: 'perfume-edit'; id?: string }
+  | { view: 'list' } | { view: 'wishlist' } | { view: 'perfume'; id: string }
+  | { view: 'perfume-edit'; id?: string; wish?: boolean; convert?: boolean }
   | { view: 'terms' } | { view: 'term'; id: string } | { view: 'term-edit'; id?: string }
   | { view: 'more' }
 
 function parse(hash: string): Route {
   const [a, b, c] = hash.replace(/^#\/?/, '').split('/')
   if (a === 'p' && b === 'new') return { view: 'perfume-edit' }
+  if (a === 'w' && b === 'new') return { view: 'perfume-edit', wish: true }
+  if (a === 'p' && b && c === 'tried') return { view: 'perfume-edit', id: b, convert: true }
+  if (a === 'wishlist') return { view: 'wishlist' }
   if (a === 'p' && b && c === 'edit') return { view: 'perfume-edit', id: b }
   if (a === 'p' && b) return { view: 'perfume', id: b }
   if (a === 'terms') return { view: 'terms' }
@@ -81,6 +85,7 @@ function Diary({ email }: { email: string }) {
   const [perfumes, setPerfumes] = useState<Perfume[] | null>(null)
   const [terms, setTerms] = useState<Term[] | null>(null)
   const [filters, setFilters] = useState<Filters>(emptyFilters)
+  const [wishFilters, setWishFilters] = useState<Filters>(emptyFilters)
   const [termQuery, setTermQuery] = useState('')
   const [loadError, setLoadError] = useState('')
 
@@ -118,25 +123,34 @@ function Diary({ email }: { email: string }) {
   )
   if (!perfumes || !terms) return <div className="splash"><span className="brand">Perfume Diary</span></div>
 
-  const tab = route.view.startsWith('term') ? 'terms' : route.view === 'more' ? 'more' : 'list'
   const findP = (id?: string) => perfumes.find(p => p.id === id)
+  const openP = route.view === 'perfume' ? findP(route.id) : undefined
+  const tab = route.view.startsWith('term') ? 'terms' : route.view === 'more' ? 'more'
+    : route.view === 'wishlist' || (openP && isWish(openP)) ? 'wishlist' : 'list'
   const findT = (id?: string) => terms.find(t => t.id === id)
 
   let screen
   switch (route.view) {
     case 'list':
-      screen = <PerfumeList perfumes={perfumes} filters={filters} setFilters={setFilters} />
+      screen = <PerfumeList mode="tried" perfumes={perfumes} filters={filters} setFilters={setFilters} />
+      break
+    case 'wishlist':
+      screen = <PerfumeList mode="wishlist" perfumes={perfumes} filters={wishFilters} setFilters={setWishFilters} />
       break
     case 'perfume': {
       const p = findP(route.id)
       screen = p
         ? <PerfumeDetail perfume={p} terms={terms} onChange={savePerfume} onDelete={dropPerfume}
-            onNote={note => { setFilters({ ...emptyFilters, note }); go('/') }} />
+            onNote={(note, mode) => {
+              if (mode === 'wishlist') { setWishFilters({ ...emptyFilters, note }); go('/wishlist') }
+              else { setFilters({ ...emptyFilters, note }); go('/') }
+            }} />
         : <NotFound />
       break
     }
     case 'perfume-edit':
-      screen = <PerfumeForm key={route.id ?? 'new'} perfume={findP(route.id)} perfumes={perfumes} onSaved={savePerfume} />
+      screen = <PerfumeForm key={`${route.id ?? 'new'}-${route.wish}-${route.convert}`} perfume={findP(route.id)}
+        perfumes={perfumes} wish={route.wish} convert={route.convert} onSaved={savePerfume} />
       break
     case 'terms':
       screen = <TermList terms={terms} perfumes={perfumes} query={termQuery} setQuery={setTermQuery} />
@@ -160,6 +174,7 @@ function Diary({ email }: { email: string }) {
       {!editing && (
         <nav className="tabbar">
           <a href="#/" className={tab === 'list' ? 'on' : ''}><Icon name="bottle" /><span>Perfumes</span></a>
+          <a href="#/wishlist" className={tab === 'wishlist' ? 'on' : ''}><Icon name="bookmark" /><span>Want to try</span></a>
           <a href="#/terms" className={tab === 'terms' ? 'on' : ''}><Icon name="book" /><span>Glossary</span></a>
           <a href="#/more" className={tab === 'more' ? 'on' : ''}><Icon name="more" /><span>Insights</span></a>
         </nav>
