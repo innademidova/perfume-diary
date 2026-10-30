@@ -339,10 +339,11 @@ input[type='date'] { min-height: 47px; }
 .thumb {
   width: 76px; height: 88px;
   border-radius: 18px;
-  object-fit: cover;
   flex: none;
   background: var(--surface-2);
 }
+/* Флакон показуємо повністю, без обрізання */
+img.thumb { display: block; object-fit: contain !important; background: #fff; padding: 4px; box-sizing: border-box; }
 .thumb-empty {
   display: grid;
   place-items: center;
@@ -447,8 +448,8 @@ input[type='date'] { min-height: 47px; }
   display: block;
   width: 100%;
   aspect-ratio: 4 / 4.4;
-  object-fit: cover;
-  background: var(--surface-2);
+  object-fit: contain;
+  background: #fff;
   border-radius: 0 0 32px 32px;
 }
 .hero-empty {
@@ -497,7 +498,7 @@ input[type='date'] { min-height: 47px; }
   background: var(--surface);
   box-shadow: var(--shadow);
 }
-.photo-pick img { display: block; width: 100%; max-height: 360px; object-fit: cover; }
+.photo-pick img { display: block; width: 100%; max-height: 360px; object-fit: contain; background: #fff; }
 .photo-pick input[type='file'] { position: absolute; inset: 0; opacity: 0; cursor: pointer; padding: 0; }
 .photo-empty {
   height: 150px;
@@ -633,6 +634,3 @@ a.link { color: var(--pink-ink); text-decoration: underline; }
 .segmented button span { font-weight: 500; opacity: .7; margin-left: 2px; }
 .segmented button.on { background: var(--surface-solid); color: var(--pink-ink); box-shadow: var(--shadow); }
 
-/* Фото флаконів на білому тлі — показуємо повністю, без обрізання */
-img.thumb { object-fit: contain; background: #fff; padding: 4px; }
-img.hero { object-fit: contain; background: #fff; }

@@ -13,6 +13,7 @@ export type Mode = 'tried' | 'wishlist'
 export type Filters = {
   q: string
   family: string
+  brand: string
   status: string
   note: string
   minRating: number
@@ -23,7 +24,7 @@ export type Filters = {
   sort: 'new' | 'rating' | 'price' | 'name' | 'tried'
 }
 export const emptyFilters: Filters = {
-  q: '', family: '', status: '', note: '', minRating: 0, season: '', source: '', favorite: false, toRate: false, sort: 'new',
+  q: '', family: '', brand: '', status: '', note: '', minRating: 0, season: '', source: '', favorite: false, toRate: false, sort: 'new',
 }
 
 export const isWish = (p: Perfume) => p.status === 'wishlist'
@@ -52,6 +53,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
     [ownList, wish, f.toRate],
   )
   const families = useMemo(() => uniq(perfumes.map(p => p.family)), [perfumes])
+  const brands = useMemo(() => uniq(perfumes.map(p => p.brand)), [perfumes])
   const notes = useMemo(() => uniq(perfumes.flatMap(allNotes)), [perfumes])
   const newPath = wish ? '/w/new' : '/p/new'
 
@@ -63,6 +65,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
         if (!q.split(/\s+/).every(w => hay.includes(w))) return false
       }
       if (f.family && p.family !== f.family) return false
+      if (f.brand && p.brand !== f.brand) return false
       if (f.status && p.status !== f.status) return false
       if (f.note && !allNotes(p).some(n => norm(n) === norm(f.note))) return false
       if (f.minRating && (p.rating ?? 0) < f.minRating) return false
@@ -84,6 +87,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
   const urls = usePhotoUrls(shown.map(p => p.photo_path))
   const active: [keyof Filters, string][] = []
   if (f.family) active.push(['family', f.family])
+  if (f.brand) active.push(['brand', f.brand])
   if (f.status) active.push(['status', STATUSES[f.status]])
   if (f.note) active.push(['note', `note: ${f.note}`])
   if (f.minRating) active.push(['minRating', `${f.minRating}★ and up`])
@@ -132,6 +136,12 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
               <select value={f.family} onChange={e => set({ family: e.target.value })}>
                 <option value="">all</option>
                 {families.map(x => <option key={x}>{x}</option>)}
+              </select>
+            </Field>
+            <Field label="Brand">
+              <select value={f.brand} onChange={e => set({ brand: e.target.value })}>
+                <option value="">all</option>
+                {brands.map(x => <option key={x}>{x}</option>)}
               </select>
             </Field>
             <Field label="Note">
