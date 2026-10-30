@@ -39,3 +39,4 @@
 18. Add form: "I have it / Want to try" switch (she couldn't find how to add to Want to try). Password field has a show/hide eye.
 19. Wide monitors: content fills the screen (grid up to ~1640px, centred), narrow pages centred; Insights stat renamed to «in my diary».
 20. Photos replaced for Carate Urio and Red Enigma (white background). Added 24 perfumes to Want to try from her shop screenshots (with ₴/ml where shown); duplicates skipped.
+21. Helper scripts moved into the repo (sql.mjs, add-perfumes.mjs) and CLAUDE.md documents what persists between sessions.

@@ -33,6 +33,8 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
 - `src/predict.ts` note statistics + "similar perfumes" (no numeric forecast — see INSIGHTS).
 - `src/ai.tsx` AI forecast card, taste profile card, accuracy card (queue-based, see below).
 - `supabase/schema.sql` full schema; apply changes via SQL (append new statements to this file too).
+- `scripts/sql.mjs` run SQL against the database (schema changes; token from the Supabase CLI login in Keychain).
+- `scripts/add-perfumes.mjs` bulk-add perfumes from a JSON file (photos from Fragrantica IDs or image paths/URLs, duplicates skipped).
 - `scripts/ai-queue.mjs` export/apply for the AI queue (forecasts, taste profile, lookup drafts).
 - `supabase/functions/ai/index.ts` Edge Function (Deno) calling **Claude Haiku 5.5** (`claude-haiku-5-5`) via the API:
   actions `lookup` (web search on Fragrantica → candidate versions), `image` (copies the fimgs bottle photo into
@@ -55,6 +57,16 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
   likes[], risks[].
 - `taste_profile`: one row — profile text (Ukrainian), loves[], avoids[], based_on (rated count), refresh_requested.
 - Storage bucket `photos` (private, signed URLs), path `<user_id>/<uuid>.jpg`.
+
+## Access in a new session (what persists on this Mac)
+
+- GitHub: `gh` is logged in as `innademidova` (Keychain); this repo pushes through `gh auth git-credential`.
+- Supabase CLI: logged in with an access token (Keychain) → `scripts/sql.mjs`, `supabase functions deploy`,
+  `supabase secrets set` work. **If it fails with 401, the token expired** (she created it with an expiry): ask her to
+  create a new one at supabase.com/dashboard/account/tokens and run `! npx supabase login --token sbp_…`.
+- App data (her login): `.env.local` → `scripts/ai-queue.mjs`, `scripts/add-perfumes.mjs`.
+- Claude API key + workspace: Supabase secrets (nothing needed locally).
+- Nothing else needs to be reconnected.
 
 ## Deploy
 
