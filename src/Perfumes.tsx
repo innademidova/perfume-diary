@@ -19,13 +19,16 @@ export type Filters = {
   season: string
   source: string
   favorite: boolean
+  toRate: boolean
   sort: 'new' | 'rating' | 'price' | 'name' | 'tried'
 }
 export const emptyFilters: Filters = {
-  q: '', family: '', status: '', note: '', minRating: 0, season: '', source: '', favorite: false, sort: 'new',
+  q: '', family: '', status: '', note: '', minRating: 0, season: '', source: '', favorite: false, toRate: false, sort: 'new',
 }
 
 export const isWish = (p: Perfume) => p.status === 'wishlist'
+// Уже є, але ще без оцінки
+export const isToRate = (p: Perfume) => !isWish(p) && p.rating == null
 
 const uniq = (xs: (string | null | undefined)[]) =>
   [...new Set(xs.filter((x): x is string => !!x && !!x.trim()))].sort((a, b) => a.localeCompare(b, 'uk'))
@@ -42,7 +45,12 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
   const [showFilters, setShowFilters] = useState(false)
   const set = (patch: Partial<Filters>) => setFilters({ ...f, ...patch })
 
-  const perfumes = useMemo(() => all.filter(p => isWish(p) === wish), [all, wish])
+  const ownList = useMemo(() => all.filter(p => isWish(p) === wish), [all, wish])
+  const toRateCount = useMemo(() => ownList.filter(isToRate).length, [ownList])
+  const perfumes = useMemo(
+    () => wish ? ownList : ownList.filter(p => isToRate(p) === f.toRate),
+    [ownList, wish, f.toRate],
+  )
   const families = useMemo(() => uniq(perfumes.map(p => p.family)), [perfumes])
   const notes = useMemo(() => uniq(perfumes.flatMap(allNotes)), [perfumes])
   const newPath = wish ? '/w/new' : '/p/new'
@@ -93,6 +101,17 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
         <button className="btn-icon accent" onClick={() => go(newPath)} aria-label="Add perfume"><Icon name="plus" /></button>
       </header>
 
+      {!wish && (toRateCount > 0 || f.toRate) && (
+        <div className="segmented">
+          <button className={!f.toRate ? 'on' : ''} onClick={() => set({ toRate: false, minRating: 0 })}>
+            Rated <span>{ownList.length - toRateCount}</span>
+          </button>
+          <button className={f.toRate ? 'on' : ''} onClick={() => set({ toRate: true, minRating: 0 })}>
+            To rate <span>{toRateCount}</span>
+          </button>
+        </div>
+      )}
+
       {perfumes.length > 0 && (
         <div className="toolbar">
           <div className="search">
@@ -142,12 +161,12 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
                     {Object.entries(SEASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </Field>
-                <Field label="Min rating">
+                {!f.toRate && <Field label="Min rating">
                   <select value={f.minRating} onChange={e => set({ minRating: Number(e.target.value) })}>
                     <option value={0}>any</option>
                     {[2, 3, 3.5, 4, 4.5, 5].map(x => <option key={x} value={x}>{x} ★</option>)}
                   </select>
-                </Field>
+                </Field>}
               </>
             )}
             <Field label="Sort by">
@@ -173,12 +192,17 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
           {active.map(([k, label]) => (
             <button key={k} className="chip on" onClick={() => set({ [k]: emptyFilters[k] })}>{label} ×</button>
           ))}
-          <button className="chip link" onClick={() => setFilters({ ...emptyFilters, sort: f.sort })}>clear all</button>
+          <button className="chip link" onClick={() => setFilters({ ...emptyFilters, sort: f.sort, toRate: f.toRate })}>clear all</button>
         </div>
       )}
 
       {perfumes.length === 0 ? (
-        wish ? (
+        f.toRate ? (
+          <div className="empty">
+            <p className="big">Everything is rated</p>
+            <p className="muted">Perfumes you own but haven't rated yet will show up here</p>
+          </div>
+        ) : wish ? (
           <div className="empty">
             <p className="big">Nothing on your list yet</p>
             <p className="muted">Save perfumes you've heard about: from a friend, a reel, or just because of the notes</p>
@@ -215,7 +239,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
                       </>
                     ) : (
                       <>
-                        {p.rating != null ? <Stars value={p.rating} size="sm" /> : <span className="muted small">not rated</span>}
+                        {p.rating != null ? <Stars value={p.rating} size="sm" /> : <span className="pill">to rate</span>}
                         {p.price_per_ml != null && <span className="small muted">{money(p.price_per_ml, p.currency)}/ml</span>}
                       </>
                     )}
@@ -311,7 +335,7 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
           <div className="detail-rating">
             {p.rating != null
               ? <><Stars value={p.rating} size="lg" /><span className="serif">{String(p.rating)}</span></>
-              : <span className="muted">not rated</span>}
+              : <span className="muted">waiting for my rating</span>}
           </div>
         )}
 
@@ -323,6 +347,11 @@ export function PerfumeDetail({ perfume: p, terms, onChange, onDelete, onNote }:
         {wish && (
           <button className="btn primary wide" onClick={() => go(`/p/${p.id}/tried`)}>
             <Icon name="check" /> I tried it
+          </button>
+        )}
+        {isToRate(p) && (
+          <button className="btn primary wide" onClick={() => go(`/p/${p.id}/edit`)}>
+            <Icon name="edit" /> Rate it
           </button>
         )}
 

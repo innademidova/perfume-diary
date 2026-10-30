@@ -610,3 +610,29 @@ a.link { color: var(--pink-ink); text-decoration: underline; }
 .link-row .btn-icon .icon { width: 18px; height: 18px; }
 .add-link { align-self: flex-start; }
 .detail .btn.primary.wide { margin: 4px 0; }
+
+/* --- Перемикач «Оцінені / Чекають оцінки» --- */
+
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.segmented button {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: background .15s, color .15s;
+}
+.segmented button span { font-weight: 500; opacity: .7; margin-left: 2px; }
+.segmented button.on { background: var(--surface-solid); color: var(--pink-ink); box-shadow: var(--shadow); }
+
+/* Фото флаконів на білому тлі — показуємо повністю, без обрізання */
+img.thumb { object-fit: contain; background: #fff; padding: 4px; }
+img.hero { object-fit: contain; background: #fff; }
