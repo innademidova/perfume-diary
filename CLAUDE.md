@@ -96,7 +96,6 @@ before importing. Upload the image to Storage, insert the row. Unrated owned per
 
 ## Open items / ideas
 
-- **Pending:** her Claude API key needs a workspace ID (`wrkspc_…`, console.anthropic.com → Settings → Workspaces),
-  or a workspace-scoped key. Then `npx supabase secrets set --project-ref eyczhhvxuofvfeoqwfbg ANTHROPIC_WORKSPACE_ID=…`
-  and test `lookup`/`forecast`/`profile`. Gemini was tried and dropped: Google Search grounding isn't on its free tier.
+- Claude API is connected (workspace `wrkspc_01NQkNTTNvnznQTWDAiigtWL`, secret set). Gemini was dropped: Google Search
+  grounding isn't on its free tier.
 - Possible later: chat with the diary ("what to wear this autumn?"), sort To rate by forecast.

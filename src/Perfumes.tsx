@@ -576,9 +576,12 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
     } catch (e) { setError(e instanceof Error ? e.message : String(e)) }
     setFinding(false)
   }
+  // Бренд пишемо так, як він уже є в щоденнику («By Kilian» → «Kilian»)
+  const sameBrand = (b: string) => norm(b).replace(/^by /, '')
   const choose = (c: Candidate) => {
+    const known = c.brand ? brands.find(b => sameBrand(b) === sameBrand(c.brand)) : undefined
     set({
-      name: c.name || d.name, brand: c.brand || d.brand, year: c.year ? String(c.year) : d.year,
+      name: c.name || d.name, brand: known ?? (c.brand || d.brand), year: c.year ? String(c.year) : d.year,
       perfumer: c.perfumer ?? d.perfumer, family: c.family ?? d.family,
       concentration: c.concentration && CONCENTRATIONS.includes(c.concentration) ? c.concentration : d.concentration,
       top_notes: c.top_notes ?? [], heart_notes: c.heart_notes ?? [], base_notes: c.base_notes ?? [],

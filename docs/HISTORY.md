@@ -35,3 +35,4 @@
     "queue" (free, Claude Code). Add form has "Find with AI" (candidate versions with bottle photos → prefilled form,
     marked "filled by AI", source link) or "Add to queue" (draft with ⏳, filled by Claude Code).
 16. Password changed at her request (stored only in `.env.local`).
+17. Workspace ID received → API mode works (lookup ~15 s with 3 web searches; forecast ~5 s).
