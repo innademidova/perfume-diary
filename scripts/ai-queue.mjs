@@ -3,6 +3,8 @@
 //   node scripts/ai-queue.mjs apply  <file.json>  — записує готові прогнози / профіль
 // Формат файла для apply:
 //   { "profile": { "profile": "...", "loves": [], "avoids": [] } | null,
+//     "lookups": [{ "perfume_id": "...", "name": "", "brand": "", "year": 2020, "perfumer": "", "concentration": "EDP",
+//                   "family": "", "top_notes": [], "heart_notes": [], "base_notes": [], "fragrantica_id": "12345" }],
 //     "predictions": [{ "perfume_id": "...", "rating": 2.5, "confidence": "medium",
 //                       "summary": "...", "likes": [], "risks": [] }] }
 // Логін береться з .env.local (PERFUME_EMAIL, PERFUME_PASSWORD) — файл не потрапляє в git.
@@ -33,6 +35,8 @@ if (cmd === 'export') {
     current_profile: profile,
     rated_count: rated.length,
     queue: queue.map(q => strip(perfumes.find(p => p.id === q.perfume_id))),
+    // чернетки: знайти точну версію на Fragrantica, ноти та фото (fragrantica_id)
+    lookups: perfumes.filter(p => p.lookup_status === 'queued').map(p => ({ perfume_id: p.id, name: p.name, brand: p.brand, status: p.status })),
     rated: rated.map(strip),
     glossary: terms.map(t => ({ name: t.name, kind: t.kind, smell: t.smell, description: t.description })),
     past_predictions: predictions.filter(x => x.status === 'done').map(x => {
@@ -41,7 +45,7 @@ if (cmd === 'export') {
     }),
   }
   writeFileSync(file, JSON.stringify(out, null, 1))
-  console.log(`queue: ${queue.length}, profile requested: ${out.profile_requested}, rated: ${rated.length} → ${file}`)
+  console.log(`lookups: ${out.lookups.length}, queue: ${queue.length}, profile requested: ${out.profile_requested}, rated: ${rated.length} → ${file}`)
 } else if (cmd === 'apply') {
   const res = JSON.parse(readFileSync(file, 'utf8'))
   if (res.profile) {
@@ -51,6 +55,21 @@ if (cmd === 'export') {
       ...res.profile, based_on: count, refresh_requested: false, updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
     console.log('profile:', error?.message ?? 'saved')
+  }
+  const { data: { user } } = await sb.auth.getUser()
+  for (const l of res.lookups ?? []) {
+    const { perfume_id, fragrantica_id, ...fields } = l
+    let photo_path
+    if (fragrantica_id) {
+      const r = await fetch(`https://fimgs.net/mdimg/perfume/o.${fragrantica_id}.jpg`, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+      if (r.ok) {
+        photo_path = `${user.id}/${crypto.randomUUID()}.jpg`
+        const up = await sb.storage.from('photos').upload(photo_path, await r.arrayBuffer(), { contentType: 'image/jpeg' })
+        if (up.error) { console.log('photo upload failed', up.error.message); photo_path = undefined }
+      }
+    }
+    const { error } = await sb.from('perfumes').update({ ...fields, ...(photo_path ? { photo_path } : {}), lookup_status: null }).eq('id', perfume_id)
+    console.log('lookup', fields.name, error?.message ?? (photo_path ? 'saved with photo' : 'saved'))
   }
   for (const p of res.predictions ?? []) {
     const { error } = await sb.from('predictions').update({

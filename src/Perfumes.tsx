@@ -2,13 +2,13 @@ import { useMemo, useState, type FormEvent } from 'react'
 import {
   supabase, allNotes, mentions, money, formatDate, norm, uploadPhoto, removePhoto, linkTitle, cleanLinks,
   FAMILIES, CONCENTRATIONS, COMMON_NOTES, STATUSES, TRIED_STATUSES, REASONS, REASONS_SHORT,
-  SEASONS, DAYTIME, WOULD_BUY, LONGEVITY, SILLAGE,
-  type Perfume, type Term,
+  SEASONS, DAYTIME, WOULD_BUY, LONGEVITY, SILLAGE, callAI,
+  type Perfume, type Term, type Candidate,
 } from './lib'
 import { Stars, Scale, Meter, Chips, TagInput, Thumb, Field, Icon, LinksEditor, usePhotoUrls } from './ui'
 import { go, back } from './App'
 import { buildModel, clues } from './predict'
-import { ForecastCard } from './ai'
+import { ForecastCard, TwoWays } from './ai'
 
 export type Mode = 'tried' | 'wishlist'
 
@@ -256,6 +256,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
                   <div className="prow-title">
                     <span className="prow-name">{p.name}</span>
                     {p.favorite && <span className="fav-dot" aria-label="favourite">♥</span>}
+                    {p.lookup_status === 'queued' && <span title="Waiting for Claude">⏳</span>}
                   </div>
                   <div className="muted small">{[p.brand, p.family].filter(Boolean).join(' · ')}</div>
                   <div className="prow-meta">
@@ -360,6 +361,9 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
       <div className="detail-body">
         {p.brand && <p className="eyebrow">{p.brand}</p>}
         <h1 className="detail-title">{p.name}</h1>
+        {p.lookup_status === 'queued' && (
+          <p className="ai-filled">⏳ Waiting for Claude to fill in brand, notes and photo. Ask Claude Code: «обработай очередь»</p>
+        )}
         <p className="muted">{[p.concentration, p.year, p.perfumer && `by ${p.perfumer}`].filter(Boolean).join(' · ')}</p>
 
         {!wish && (
@@ -512,7 +516,7 @@ const blank: Draft = {
   top_notes: [], heart_notes: [], base_notes: [], price_per_ml: '', currency: '₴', volume_ml: '3',
   status: 'decant', rating: null, longevity: null, sillage: null, seasons: [], daytime: [],
   would_buy: null, tried_on: today(), review: '', photo_path: null, favorite: false,
-  reason_source: null, reason_note: '', links: [],
+  reason_source: null, reason_note: '', links: [], lookup_status: null,
 }
 const blankWish: Draft = { ...blank, status: 'wishlist', tried_on: null, volume_ml: '' }
 
@@ -543,6 +547,11 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [dropPhoto, setDropPhoto] = useState(false)
+  const [aiFid, setAiFid] = useState<string | null>(null)       // фото флакона знайдене ІІ, завантажимо при збереженні
+  const [aiSource, setAiSource] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [finding, setFinding] = useState(false)
+  const [candidates, setCandidates] = useState<Candidate[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const set = (patch: Partial<Draft>) => setD(x => ({ ...x, ...patch }))
@@ -558,6 +567,38 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
     setFile(f); setDropPhoto(false)
     setPreview(URL.createObjectURL(f))
   }
+  const find = async () => {
+    if (!query.trim()) return
+    setFinding(true); setError(''); setCandidates(null)
+    try {
+      const r = await callAI<{ candidates: Candidate[] }>({ action: 'lookup', query: query.trim() })
+      setCandidates(r.candidates)
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)) }
+    setFinding(false)
+  }
+  const choose = (c: Candidate) => {
+    set({
+      name: c.name || d.name, brand: c.brand || d.brand, year: c.year ? String(c.year) : d.year,
+      perfumer: c.perfumer ?? d.perfumer, family: c.family ?? d.family,
+      concentration: c.concentration && CONCENTRATIONS.includes(c.concentration) ? c.concentration : d.concentration,
+      top_notes: c.top_notes ?? [], heart_notes: c.heart_notes ?? [], base_notes: c.base_notes ?? [],
+    })
+    if (c.fragrantica_id && !file) { setAiFid(c.fragrantica_id); setPreview(c.image_url); setDropPhoto(false) }
+    setAiSource(c.fragrantica_url || null)
+    setCandidates(null)
+  }
+  // Безкоштовний шлях: чернетка з назвою, Claude Code заповнить її з черги
+  const queueLookup = async () => {
+    if (!query.trim()) return
+    setBusy(true); setError('')
+    const { data, error } = await supabase.from('perfumes')
+      .insert({ name: query.trim(), status: d.status, lookup_status: 'queued', volume_ml: wish ? null : 3, tried_on: null })
+      .select().single()
+    if (error) { setError(error.message); setBusy(false); return }
+    onSaved(data as Perfume)
+    location.replace(`#/p/${(data as Perfume).id}`)
+  }
+
   const currentPhoto = preview ?? (!dropPhoto && perfume?.photo_path ? urls[perfume.photo_path] : null)
 
   const price = num(d.price_per_ml), vol = num(d.volume_ml)
@@ -570,6 +611,10 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
     try {
       let photo_path = dropPhoto ? null : d.photo_path
       if (file) photo_path = await uploadPhoto(file)
+      else if (aiFid) {
+        try { photo_path = (await callAI<{ path: string }>({ action: 'image', fragrantica_id: aiFid })).path }
+        catch { /* без фото теж можна зберегти */ }
+      }
       const row = {
         ...d,
         name: d.name.trim(),
@@ -577,7 +622,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
         concentration: d.concentration || null, family: d.family?.trim() || null,
         review: d.review?.trim() || null, reason_note: d.reason_note?.trim() || null,
         tried_on: wish ? null : d.tried_on || null, links: cleanLinks(d.links),
-        year: num(d.year), price_per_ml: price, volume_ml: vol, photo_path,
+        year: num(d.year), price_per_ml: price, volume_ml: vol, photo_path, lookup_status: null,
       }
       const q = perfume
         ? supabase.from('perfumes').update(row).eq('id', perfume.id)
@@ -621,6 +666,44 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
 
       {error && <p className="error">{error}</p>}
 
+      {!perfume && (
+        <section className="card ai-find">
+          <h2>Find with AI</h2>
+          <div className="row">
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Brand and name, e.g. Kilian Angels' Share"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); find() } }} />
+          </div>
+          {query.trim() && !candidates && (
+            <TwoWays now={find} later={queueLookup} busy={finding || busy} nowLabel="Find now" laterLabel="Add to queue" />
+          )}
+          {finding && <p className="muted small">Searching the web, usually 10–30 seconds…</p>}
+          {candidates && (candidates.length === 0
+            ? <p className="muted small">Nothing found. Try another spelling, or fill the form yourself.</p>
+            : (
+              <>
+                <p className="muted small">Which one?</p>
+                <ul className="candidates">
+                  {candidates.map((c, i) => (
+                    <li key={i}>
+                      <button type="button" onClick={() => choose(c)}>
+                        {c.image_url ? <img src={c.image_url} alt="" /> : <div className="thumb thumb-empty">{c.name.charAt(0)}</div>}
+                        <div>
+                          <b>{c.name}</b>
+                          <div className="muted small">{[c.brand, c.concentration, c.year].filter(Boolean).join(' · ')}</div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ))}
+          {aiSource && (
+            <p className="ai-filled">✨ Filled in by AI — please check before saving. <a href={aiSource} target="_blank" rel="noopener noreferrer">Source</a></p>
+          )}
+          <p className="muted small">Or fill in the form yourself ↓</p>
+        </section>
+      )}
+
       <div className="photo-pick">
         {currentPhoto
           ? <img src={currentPhoto} alt="" />
@@ -628,7 +711,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
         <input type="file" accept="image/*" onChange={e => pickPhoto(e.target.files?.[0])} aria-label="Photo" />
         {currentPhoto && (
           <button type="button" className="btn-icon glass photo-remove" aria-label="Remove photo"
-            onClick={() => { setFile(null); setPreview(null); setDropPhoto(true) }}><Icon name="close" /></button>
+            onClick={() => { setFile(null); setPreview(null); setDropPhoto(true); setAiFid(null) }}><Icon name="close" /></button>
         )}
       </div>
 

@@ -1,7 +1,7 @@
 // Прогнози та профіль смаку від ІІ.
 // Застосунок лише ставить запити в чергу; обробляє їх Claude Code (scripts/ai-queue.mjs).
-import { createContext, useContext } from 'react'
-import { supabase, formatDate, type Perfume } from './lib'
+import { createContext, useContext, useState } from 'react'
+import { supabase, formatDate, callAI, type Perfume } from './lib'
 import { Stars, Icon } from './ui'
 
 export type Prediction = {
@@ -36,12 +36,36 @@ export const useAI = () => useContext(AIContext)
 
 export const QUEUE_HINT = 'Ask Claude Code on your computer: «обработай очередь»'
 
+// Два способи: зараз через API (платно, копійки) або в чергу для Claude Code (безкоштовно, пізніше)
+export function TwoWays({ now, later, busy, nowLabel = 'Now', laterLabel = 'Add to queue' }: {
+  now: () => void; later?: () => void; busy: boolean; nowLabel?: string; laterLabel?: string
+}) {
+  return (
+    <div className="two-ways">
+      <button className="btn primary sm" onClick={now} disabled={busy}>
+        <Icon name="spark" /> {busy ? 'Thinking…' : nowLabel}
+      </button>
+      {later && <button className="btn sm" onClick={later} disabled={busy}>{laterLabel}</button>}
+      <p className="muted small">«{nowLabel}» uses the paid API (~1¢). The queue is free: Claude Code handles it on the computer.</p>
+    </div>
+  )
+}
+
 const CONF: Record<string, string> = { low: 'low confidence', medium: 'medium confidence', high: 'high confidence' }
 
 export function ForecastCard({ perfume }: { perfume: Perfume }) {
   const { predictions, savePrediction } = useAI()
   const pr = predictions.get(perfume.id)
   const rated = perfume.rating != null && perfume.status !== 'wishlist'
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const now = async () => {
+    setBusy(true); setErr('')
+    try { savePrediction(await callAI<Prediction>({ action: 'forecast', perfume_id: perfume.id }), perfume.id) }
+    catch (e) { setErr(e instanceof Error ? e.message : String(e)) }
+    setBusy(false)
+  }
 
   const request = async () => {
     const row = {
@@ -79,7 +103,8 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
     <section className="card forecast">
       <h2>AI forecast</h2>
       <p className="muted small">Claude will compare this perfume with everything in my diary and guess my rating and impressions.</p>
-      <button className="btn" onClick={request}><Icon name="spark" /> Ask for a forecast</button>
+      <TwoWays now={now} later={request} busy={busy} nowLabel="Forecast now" />
+      {err && <p className="error">{err}</p>}
     </section>
   )
 
@@ -88,7 +113,11 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
       <h2>AI forecast</h2>
       <p className="queued">⏳ In the queue since {formatDate(pr.requested_at.slice(0, 10))}</p>
       <p className="muted small">{QUEUE_HINT}</p>
-      <button className="btn ghost sm" onClick={cancel}>Cancel request</button>
+      <div className="row">
+        <button className="btn sm" onClick={now} disabled={busy}><Icon name="spark" /> {busy ? 'Thinking…' : 'Do it now instead'}</button>
+        <button className="btn ghost sm" onClick={cancel}>Cancel request</button>
+      </div>
+      {err && <p className="error">{err}</p>}
     </section>
   )
 
@@ -110,13 +139,25 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
         <div className="chips">{pr.risks.map(x => <span key={x} className="chip note-stat bad">{x}</span>)}</div>
       )}
       <p className="muted small">Made {pr.done_at ? formatDate(pr.done_at.slice(0, 10)) : ''} · it's a guess, not a verdict</p>
-      <button className="btn ghost sm" onClick={request}>Ask again</button>
+      <details>
+        <summary className="small muted">Ask again</summary>
+        <TwoWays now={now} later={request} busy={busy} nowLabel="Forecast now" />
+      </details>
+      {err && <p className="error">{err}</p>}
     </section>
   )
 }
 
 export function ProfileCard({ ratedCount }: { ratedCount: number }) {
   const { profile, saveProfile } = useAI()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const now = async () => {
+    setBusy(true); setErr('')
+    try { saveProfile(await callAI<TasteProfile>({ action: 'profile' })) }
+    catch (e) { setErr(e instanceof Error ? e.message : String(e)) }
+    setBusy(false)
+  }
   const request = async () => {
     const { data, error } = await supabase.from('taste_profile')
       .upsert({ refresh_requested: true }, { onConflict: 'user_id' }).select().single()
@@ -143,12 +184,17 @@ export function ProfileCard({ ratedCount }: { ratedCount: number }) {
         <>
           <p className="queued">⏳ Update requested</p>
           <p className="muted small">{QUEUE_HINT}</p>
+          <button className="btn sm" onClick={now} disabled={busy}><Icon name="spark" /> {busy ? 'Thinking…' : 'Do it now instead'}</button>
         </>
+      ) : (!profile?.profile || fresh >= 3) ? (
+        <TwoWays now={now} later={request} busy={busy} nowLabel={profile?.profile ? 'Update now' : 'Build now'} />
       ) : (
-        (!profile?.profile || fresh >= 3) && (
-          <button className="btn" onClick={request}><Icon name="spark" /> {profile?.profile ? 'Update profile' : 'Build my profile'}</button>
-        )
+        <details>
+          <summary className="small muted">Update anyway</summary>
+          <TwoWays now={now} later={request} busy={busy} nowLabel="Update now" />
+        </details>
       )}
+      {err && <p className="error">{err}</p>}
     </section>
   )
 }

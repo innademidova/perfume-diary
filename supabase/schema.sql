@@ -110,3 +110,6 @@ create policy "own predictions" on public.predictions for all to authenticated
 drop policy if exists "own profile" on public.taste_profile;
 create policy "own profile" on public.taste_profile for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Черга пошуку: чернетка аромату, яку Claude Code заповнить нотами та фото
+alter table public.perfumes add column if not exists lookup_status text;  -- queued | null

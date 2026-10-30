@@ -30,3 +30,8 @@
     columns (sticky photo left) on ≥900px.
 13. **Gemini key received** for AI autofill. Notes: older models (2.5) are unavailable to new users; new models
     work via the Interactions API (`POST /v1beta/interactions`, tools `[{"type":"google_search"}]`).
+14. Gemini dropped (no free search grounding for current models; Fragrantica/Parfumo/search engines block scraping).
+15. She gave a **Claude API key**: Edge Function `ai` with Claude Haiku 5.5. Every AI action now offers "now" (API) or
+    "queue" (free, Claude Code). Add form has "Find with AI" (candidate versions with bottle photos → prefilled form,
+    marked "filled by AI", source link) or "Add to queue" (draft with ⏳, filled by Claude Code).
+16. Password changed at her request (stored only in `.env.local`).

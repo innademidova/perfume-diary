@@ -31,6 +31,7 @@ export type Perfume = {
   review: string | null
   photo_path: string | null
   favorite: boolean
+  lookup_status: string | null
   reason_source: string | null
   reason_note: string | null
   links: Link[]
@@ -187,4 +188,22 @@ export async function uploadPhoto(file: File) {
 
 export async function removePhoto(path: string | null) {
   if (path) await supabase.storage.from('photos').remove([path])
+}
+
+// --- Серверна функція ІІ (Claude API) ---
+
+export async function callAI<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('ai', { body })
+  if (error) {
+    let msg = error.message
+    try { msg = (await (error as { context?: Response }).context?.json())?.error ?? msg } catch { /* ignore */ }
+    throw new Error(msg)
+  }
+  return data as T
+}
+
+export type Candidate = {
+  name: string; brand: string; year: number | null; perfumer: string | null; concentration: string | null
+  family: string | null; fragrantica_url: string; fragrantica_id: string | null; image_url: string | null
+  top_notes: string[]; heart_notes: string[]; base_notes: string[]
 }

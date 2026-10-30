@@ -33,7 +33,12 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
 - `src/predict.ts` note statistics + "similar perfumes" (no numeric forecast — see INSIGHTS).
 - `src/ai.tsx` AI forecast card, taste profile card, accuracy card (queue-based, see below).
 - `supabase/schema.sql` full schema; apply changes via SQL (append new statements to this file too).
-- `scripts/ai-queue.mjs` export/apply for the AI queue.
+- `scripts/ai-queue.mjs` export/apply for the AI queue (forecasts, taste profile, lookup drafts).
+- `supabase/functions/ai/index.ts` Edge Function (Deno) calling **Claude Haiku 5.5** (`claude-haiku-5-5`) via the API:
+  actions `lookup` (web search on Fragrantica → candidate versions), `image` (copies the fimgs bottle photo into
+  Storage), `forecast`, `profile`. Secrets in Supabase: `ANTHROPIC_API_KEY`, `ANTHROPIC_WORKSPACE_ID` (her key is
+  not workspace-scoped, so the workspace header is required). Deploy:
+  `npx supabase functions deploy ai --project-ref eyczhhvxuofvfeoqwfbg --use-api`.
 
 ## Data model (Supabase, all tables RLS "own rows only")
 
@@ -59,10 +64,15 @@ Pages is in legacy branch mode). Then commit + push `main`. GitHub Actions is NO
 `gh auth git-credential` for the personal account `innademidova` — don't touch global git config.
 After deploy, tell her to close and reopen the app on iPhone (PWA cache).
 
+## AI: two modes, her choice per action
+
+Every AI action in the app offers **"… now"** (paid Claude API via the Edge Function; lookup ≈ 1–3¢ because web
+search is $10 / 1000 searches, forecast < 1¢) and **"Add to queue"** (free: processed by Claude Code on her
+subscription when she says «обработай очередь»). She wants to decide per case depending on urgency.
+
 ## Workflow: "обработай очередь" (process the AI queue)
 
-The owner chose to run AI features through Claude Code on her subscription (free) instead of a paid API.
-The app only queues requests; Claude is the model. When she asks to process the queue:
+The app only queues requests; Claude Code is the model. When she asks to process the queue:
 
 1. `node scripts/ai-queue.mjs export /tmp/…/ctx.json` → queue, all rated perfumes with reviews, glossary,
    current profile, past predictions vs actual.
@@ -71,8 +81,11 @@ The app only queues requests; Claude is the model. When she asks to process the 
 3. For each queued perfume write a forecast: rating (0.5 steps), confidence, a 3–5 sentence summary in Ukrainian
    in her style (what she'll probably smell, what she'll like/dislike, compare with perfumes she rated), likes/risks
    tags. Use her patterns (see INSIGHTS) and similar rated perfumes. Learn from past misses.
-4. Write `{profile|null, predictions:[…]}` and run `node scripts/ai-queue.mjs apply res.json`.
-5. Tell her briefly what was predicted.
+4. For each item in `lookups` (drafts she added by name only): find the exact Fragrantica page (see "Adding perfumes"),
+   fill name, brand, year, perfumer, concentration, family, notes and `fragrantica_id` (the script copies the photo).
+   Verify the bottle image visually before applying.
+5. Write `{profile|null, lookups:[…], predictions:[…]}` and run `node scripts/ai-queue.mjs apply res.json`.
+6. Tell her briefly what was predicted / added.
 
 ## Adding perfumes for her (how it has been done)
 
@@ -83,9 +96,7 @@ before importing. Upload the image to Storage, insert the row. Unrated owned per
 
 ## Open items / ideas
 
-- **AI autofill when adding a perfume** (agreed design): search field at top of the add form → candidate versions
-  with bottle photos → pick one → form fields prefilled (highlighted, source link) → she edits and saves. Also
-  "paste a list" for bulk drafts. Backend: Supabase Edge Function `lookup` calling **Gemini API (free tier) with
-  Google Search grounding**; key stored in Supabase secrets. Waiting for her to create a Gemini API key
-  (aistudio.google.com → Get API key).
+- **Pending:** her Claude API key needs a workspace ID (`wrkspc_…`, console.anthropic.com → Settings → Workspaces),
+  or a workspace-scoped key. Then `npx supabase secrets set --project-ref eyczhhvxuofvfeoqwfbg ANTHROPIC_WORKSPACE_ID=…`
+  and test `lookup`/`forecast`/`profile`. Gemini was tried and dropped: Google Search grounding isn't on its free tier.
 - Possible later: chat with the diary ("what to wear this autumn?"), sort To rate by forecast.
