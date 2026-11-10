@@ -76,7 +76,7 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
 Pages is in legacy branch mode). Then commit + push `main`. GitHub Actions is NOT used (the gh token lacks
 `workflow` scope). Git on this Mac defaults to a work account; this repo uses a local credential helper
 `gh auth git-credential` for the personal account `innademidova` — don't touch global git config.
-After deploy, tell her to close and reopen the app on iPhone (PWA cache).
+After deploy the app updates itself: the service worker uses skipWaiting + clientsClaim (vite.config.ts) and `src/main.tsx` reloads the page when a new version takes control and checks for updates on focus. Without skipWaiting a new version stayed "waiting" until every app tab was closed.
 
 ## AI: two modes, her choice per action
 

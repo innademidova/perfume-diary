@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
+      // Activate a new version right away, even when an old page that cannot ask for it is open
+      workbox: { skipWaiting: true, clientsClaim: true, cleanupOutdatedCaches: true },
       includeAssets: ['apple-touch-icon.png', 'favicon.svg'],
       manifest: {
         name: 'Perfume Diary',
