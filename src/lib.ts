@@ -35,6 +35,7 @@ export type Perfume = {
   reason_source: string | null
   reason_note: string | null
   links: Link[]
+  accords: string[]
   created_at: string
   updated_at: string
 }
@@ -208,4 +209,5 @@ export type Candidate = {
   name: string; brand: string; year: number | null; perfumer: string | null; concentration: string | null
   family: string | null; fragrantica_url: string; fragrantica_id: string | null; image_url: string | null
   top_notes: string[]; heart_notes: string[]; base_notes: string[]
+  accords?: string[]
 }

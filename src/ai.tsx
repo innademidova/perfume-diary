@@ -3,6 +3,7 @@
 import { createContext, useContext, useState } from 'react'
 import { supabase, formatDate, callAI, type Perfume } from './lib'
 import { Stars, Icon } from './ui'
+import { canon } from './predict'
 
 export type Prediction = {
   perfume_id: string
@@ -16,7 +17,30 @@ export type Prediction = {
   done_at: string | null
 }
 
+// A red/green flag from her reviews. Matches a perfume when at least `min` (default 1) of `notes`
+// are in it, or any of `accords` is among its Fragrantica main accords.
+export type Signal = {
+  type: 'red' | 'green'
+  title: string
+  why: string
+  notes: string[]
+  min?: number
+  accords?: string[]
+  examples?: string[]
+}
+
+export function matchSignals(p: Perfume, signals: Signal[]) {
+  const notes = new Set([...p.top_notes, ...p.heart_notes, ...p.base_notes].map(canon))
+  const accords = new Set((p.accords ?? []).map(a => a.toLowerCase()))
+  return signals.flatMap(s => {
+    const hitNotes = s.notes.map(canon).filter(n => notes.has(n))
+    const hitAccords = (s.accords ?? []).filter(a => accords.has(a.toLowerCase()))
+    return hitNotes.length >= (s.min ?? 1) || hitAccords.length ? [{ ...s, hitNotes, hitAccords }] : []
+  })
+}
+
 export type TasteProfile = {
+  signals?: Signal[]
   profile: string | null
   loves: string[]
   avoids: string[]

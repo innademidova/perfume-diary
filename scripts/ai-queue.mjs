@@ -113,6 +113,11 @@ if (cmd === 'export') {
     const { error } = await sb.from('import_requests').update({ status: 'done', result: r.result ?? null }).eq('id', r.id)
     console.log('import', r.id, error?.message ?? 'done')
   }
+  // Fragrantica main accords read in Chrome (e.g. before a forecast)
+  for (const a of res.perfume_accords ?? []) {
+    const { error } = await sb.from('perfumes').update({ accords: a.accords }).eq('id', a.perfume_id)
+    console.log('accords', a.perfume_id, error?.message ?? 'saved')
+  }
   for (const p of res.predictions ?? []) {
     const { error } = await sb.from('predictions').update({
       status: 'done', rating: p.rating, confidence: p.confidence, summary: p.summary,

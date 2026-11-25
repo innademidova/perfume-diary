@@ -9,7 +9,7 @@ import { go } from './App'
 export type RecItem = {
   name: string; brand: string; year: number | null; family: string | null; concentration: string | null
   fragrantica_url: string; fragrantica_id: string | null; image_url: string | null
-  top_notes: string[]; heart_notes: string[]; base_notes: string[]
+  top_notes: string[]; heart_notes: string[]; base_notes: string[]; accords?: string[]
   why: string; risk: string | null; match: 'high' | 'medium' | 'low'
 }
 export type RecRequest = {
@@ -100,7 +100,7 @@ function RecResult({ req, perfumes, onAdded, onRemove }: {
     const { data, error } = await supabase.from('perfumes').insert({
       name: it.name, brand: it.brand || null, year: it.year, family: it.family, concentration: it.concentration,
       top_notes: it.top_notes ?? [], heart_notes: it.heart_notes ?? [], base_notes: it.base_notes ?? [],
-      status: 'wishlist', currency: '₴', volume_ml: null, tried_on: null, photo_path,
+      accords: it.accords ?? [], status: 'wishlist', currency: '₴', volume_ml: null, tried_on: null, photo_path,
       reason_source: 'ai', reason_note: it.why, links: it.fragrantica_url ? [{ url: it.fragrantica_url, label: 'Fragrantica' }] : [],
     }).select().single()
     setAdding(null)

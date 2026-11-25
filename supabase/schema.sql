@@ -174,3 +174,8 @@ alter table public.user_settings enable row level security;
 drop policy if exists "own settings" on public.user_settings;
 create policy "own settings" on public.user_settings for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Fragrantica main accords (e.g. sweet, powdery, citrus), strongest first
+alter table public.perfumes add column if not exists accords text[] not null default '{}';
+-- Red/green flags from her reviews: [{type, title, why, notes[], min, accords[], examples[]}]
+alter table public.taste_profile add column if not exists signals jsonb not null default '[]'::jsonb;

@@ -55,7 +55,7 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
   price_per_ml (₴ by default), currency, volume_ml (3), status (`decant` | `sample` | `bottle` | `wishlist`),
   rating (0–5 in 0.5 steps; her notebook uses /10 → divide by 2), longevity/sillage (1–5), seasons, daytime,
   would_buy, tried_on, review, photo_path (Storage), favorite, reason_source + reason_note (why she wants it),
-  links (jsonb `[{url,label}]`).
+  links (jsonb `[{url,label}]`), accords (Fragrantica main accords, strongest first).
   - Sections: **Rated** = not wishlist & rating set · **To rate** = not wishlist & rating null ·
     **Want to try** = status `wishlist`.
 - `terms`: glossary (molecule/note/accord/perfumer/term). Name in English so it auto-links to perfumes whose
@@ -63,7 +63,7 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
 - `predictions`: one per perfume — status `queued`|`done`, rating, confidence, summary (`ai_language`, her voice),
   likes[], risks[].
 - `user_settings`: one row — display_name, ai_language (edited in Settings).
-- `taste_profile`: one row — profile text (`ai_language`), loves[], avoids[], based_on (rated count), refresh_requested.
+- `taste_profile`: one row — profile text (`ai_language`), loves[], avoids[], signals (jsonb red/green flags), based_on (rated count), refresh_requested.
 - Storage bucket `photos` (private, signed URLs), path `<user_id>/<uuid>.jpg`.
 
 ## Access in a new session (what persists on this Mac)
@@ -101,6 +101,10 @@ The app only queues requests; Claude Code is the model. When she asks to process
    current profile, past predictions vs actual.
 2. If `profile_requested` (or ≥3 new ratings since `based_on`), rewrite the taste profile from **all review
    texts**, not just notes. Keep it ~3 short paragraphs in `ai_language` addressed to her informally, plus loves/avoids tags.
+   Also rewrite `signals` (red/green flags shown on To rate / Want to try cards instead of per-note averages): 5–10
+   patterns that really follow from her reviews (combinations and dominant notes, not single notes that happened to be
+   in failures): `{type, title, why, notes[] (canonical, see src/predict.ts canon), min, accords[], examples[]}`;
+   title/why in `ai_language`.
 3. For each queued perfume write a forecast: rating (0.5 steps), confidence, a 3–5 sentence summary in `ai_language`
    in her style (what she'll probably smell, what she'll like/dislike, compare with perfumes she rated), likes/risks
    tags. Use her patterns (see INSIGHTS) and similar rated perfumes. Learn from past misses.
@@ -110,7 +114,8 @@ The app only queues requests; Claude Code is the model. When she asks to process
    note list, so reviews weigh more than notes. How: open the page with the `navigate` tool (a page reached by
    clicking a link can be "permission denied" for reading), then click the "Reviews (N)" link and `get_page_text`
    again — review texts load only after that click. If Fragrantica fails, use Google snippets / Parfumo / Reddit. Mention
-   in the summary what the reviews say when it matters.
+   in the summary what the reviews say when it matters. Also save the page's main accords: `perfume_accords: [{perfume_id, accords[]}]`
+   in res.json (lowercase, strongest first). When adding perfumes, put `accords` in the JSON too.
 4a. For each item in `imports`: look at the image (Read the local file), recognize perfumes (shop screenshot,
    bottles, or a Ukrainian notebook page with rating /10 and review), skip ones already in the diary, find them on
    Fragrantica, verify photos, add with `scripts/add-perfumes.mjs` (status = `target_status`), then list the id in

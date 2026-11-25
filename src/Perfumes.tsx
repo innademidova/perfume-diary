@@ -8,7 +8,7 @@ import {
 import { Stars, Scale, Meter, Chips, TagInput, Thumb, Field, Icon, LinksEditor, usePhotoUrls } from './ui'
 import { go, back } from './App'
 import { buildModel, clues, canon } from './predict'
-import { ForecastCard, TwoWays } from './ai'
+import { ForecastCard, TwoWays, useAI, matchSignals } from './ai'
 
 export type Mode = 'tried' | 'wishlist'
 
@@ -301,6 +301,8 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
   const wish = isWish(p)
   const home = wish ? '/wishlist' : '/'
   const hint = useMemo(() => (wish || isToRate(p)) ? clues(buildModel(perfumes), p) : null, [perfumes, p, wish])
+  const { profile } = useAI()
+  const signals = useMemo(() => (wish || isToRate(p)) ? matchSignals(p, profile?.signals ?? []) : [], [p, wish, profile])
   const urls = usePhotoUrls([p.photo_path, ...(hint?.similar.map(s => s.perfume.photo_path) ?? [])])
   const related = terms.filter(t => mentions(p, t))
   const total = p.price_per_ml != null && p.volume_ml ? p.price_per_ml * p.volume_ml : null
@@ -396,7 +398,7 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
 
         <ForecastCard perfume={p} />
 
-        {hint && (hint.similar.length > 0 || hint.notes.length > 0) && (
+        {hint && (hint.similar.length > 0 || signals.length > 0) && (
           <section className="card">
             <h2>Clues from my diary</h2>
             {hint.similar.length > 0 && (
@@ -418,17 +420,22 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
                 </ul>
               </>
             )}
-            {hint.notes.length > 0 && (
-              <>
-                <p className="muted small">How I usually rate these notes</p>
-                <div className="chips">
-                  {hint.notes.map(n => (
-                    <span key={n.note} role="button" onClick={() => go(`/n/${encodeURIComponent(n.note)}`)} className={`chip note-stat ${n.n < 2 ? '' : n.delta >= 0.35 ? 'good' : n.delta <= -0.35 ? 'bad' : ''}`}>
-                      {n.note} <b>{n.avg.toFixed(1)}★</b> <small>×{n.n}</small>
-                    </span>
-                  ))}
-                </div>
-              </>
+            {signals.length > 0 && (
+              <ul className="signals">
+                {signals.map(s => (
+                  <li key={s.title} className={`signal ${s.type}`}>
+                    <span className="signal-dot">{s.type === 'red' ? '🔴' : '🟢'}</span>
+                    <div>
+                      <b>{s.title}</b>
+                      <p className="small">{s.why}</p>
+                      <p className="muted small">
+                        {[...s.hitNotes, ...s.hitAccords.map(a => `${a} (accord)`)].join(', ')}
+                        {s.examples?.length ? ` · like ${s.examples.join(', ')}` : ''}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
         )}
@@ -436,7 +443,7 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
         {wish && reasonCard}
         {wish && linksCard}
 
-        {hasPyramid && (
+        {(hasPyramid || p.accords?.length > 0) && (
           <section className="card">
             <h2>Notes</h2>
             {pyramid.map(([label, notes]) => notes.length > 0 && (
@@ -447,6 +454,12 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
                 </div>
               </div>
             ))}
+            {p.accords?.length > 0 && (
+              <div className="pyr-row">
+                <span className="pyr-label">Accords</span>
+                <div className="chips">{p.accords.map(a => <span key={a} className="chip accord">{a}</span>)}</div>
+              </div>
+            )}
             <p className="muted small">Tap a note to open its passport</p>
           </section>
         )}
@@ -521,7 +534,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 const blank: Draft = {
   name: '', brand: '', perfumer: '', year: '', concentration: '', family: '',
-  top_notes: [], heart_notes: [], base_notes: [], price_per_ml: '', currency: '₴', volume_ml: '3',
+  top_notes: [], heart_notes: [], base_notes: [], accords: [], price_per_ml: '', currency: '₴', volume_ml: '3',
   status: 'decant', rating: null, longevity: null, sillage: null, seasons: [], daytime: [],
   would_buy: null, tried_on: today(), review: '', photo_path: null, favorite: false,
   reason_source: null, reason_note: '', links: [], lookup_status: null,
@@ -555,6 +568,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [dropPhoto, setDropPhoto] = useState(false)
+  const [aiAccords, setAiAccords] = useState<string[] | null>(null)   // Fragrantica accords found by the AI
   const [aiFid, setAiFid] = useState<string | null>(null)       // bottle photo found by the AI, uploaded on save
   const [aiSource, setAiSource] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -594,6 +608,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
       concentration: c.concentration && CONCENTRATIONS.includes(c.concentration) ? c.concentration : d.concentration,
       top_notes: c.top_notes ?? [], heart_notes: c.heart_notes ?? [], base_notes: c.base_notes ?? [],
     })
+    if (c.accords?.length) setAiAccords(c.accords)
     if (c.fragrantica_id && !file) { setAiFid(c.fragrantica_id); setPreview(c.image_url); setDropPhoto(false) }
     setAiSource(c.fragrantica_url || null)
     setCandidates(null)
@@ -634,6 +649,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
         review: d.review?.trim() || null, reason_note: d.reason_note?.trim() || null,
         tried_on: wish ? null : d.tried_on || null, links: cleanLinks(d.links),
         year: num(d.year), price_per_ml: price, volume_ml: vol, photo_path, lookup_status: null,
+        ...(aiAccords ? { accords: aiAccords } : {}),
       }
       const q = perfume
         ? supabase.from('perfumes').update(row).eq('id', perfume.id)

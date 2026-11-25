@@ -35,9 +35,9 @@ async function lookup(query: string) {
     content: `Find the perfume "${query}" on fragrantica.com. Return up to 4 matching versions (the original and flankers whose names match the query, e.g. EDT/EDP/Elixir/Eau Fraîche/year editions), most likely first.
 
 Reply with ONLY this JSON, no other text:
-{"candidates":[{"name":"","brand":"","year":null,"perfumer":null,"concentration":null,"family":null,"fragrantica_url":"","top_notes":[],"heart_notes":[],"base_notes":[]}]}
+{"candidates":[{"name":"","brand":"","year":null,"perfumer":null,"concentration":null,"family":null,"fragrantica_url":"","top_notes":[],"heart_notes":[],"base_notes":[],"accords":[]}]}
 
-Rules: exact perfume page URLs from fragrantica.com (they end with -<number>.html); notes in English, lowercase, as listed on the page; family in English like "Floral", "Fruity Floral", "Woody Amber", "Gourmand"; concentration one of EDC, EDT, EDP, Parfum, Extrait, Oil or null. If nothing matches, return {"candidates":[]}.`,
+Rules: exact perfume page URLs from fragrantica.com (they end with -<number>.html); notes in English, lowercase, as listed on the page; family in English like "Floral", "Fruity Floral", "Woody Amber", "Gourmand"; concentration one of EDC, EDT, EDP, Parfum, Extrait, Oil or null; accords = the "main accords" from the Fragrantica page, strongest first, English lowercase (e.g. "sweet", "powdery", "citrus"), [] if unknown. If nothing matches, return {"candidates":[]}.`,
   }];
   let res: Anthropic.Message | null = null;
   for (let i = 0; i < 3; i++) {
@@ -198,17 +198,19 @@ async function profile(sb: SupabaseClient) {
   const [{ rated, context }, lang] = await Promise.all([diary(sb), language(sb)]);
   const res = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 3000,
+    max_tokens: 5000,
     system: [{ type: "text", text: role(lang) }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
     messages: [{
       role: "user",
       content: `Rewrite my taste profile from ALL my reviews (texts matter more than note names). Three short paragraphs in ${lang}: what I love (with examples), what disappoints me and why, my patterns (seasons, sweetness fatigue, longevity, price).
-Reply with ONLY JSON: {"profile": "...", "loves": ["4–7 short tags in ${lang}"], "avoids": ["5–9 short tags in ${lang}"]}`,
+Also write "signals": 5–10 red/green flags that really follow from my reviews (combinations and dominant notes I keep praising or complaining about, not single notes that just happened to be in perfumes I disliked). Each: {"type":"red"|"green","title":"short, in ${lang}","why":"1 sentence in ${lang} quoting my experience","notes":["canonical lowercase English note names that trigger it"],"min": how many of those notes must be present (2+ for combinations),"accords":["Fragrantica accords that trigger it, e.g. powdery"],"examples":["perfumes from my diary"]}.
+Reply with ONLY JSON: {"profile": "...", "loves": ["4–7 short tags in ${lang}"], "avoids": ["5–9 short tags in ${lang}"], "signals": [...]}`,
     }],
   });
   const f = parseJson(textOf(res.content));
   const { data, error } = await sb.from("taste_profile").upsert({
     profile: String(f.profile), loves: (f.loves ?? []).map(String), avoids: (f.avoids ?? []).map(String),
+    signals: Array.isArray(f.signals) ? f.signals : [],
     based_on: rated.length, refresh_requested: false, updated_at: new Date().toISOString(),
   }, { onConflict: "user_id" }).select().single();
   if (error) throw error;
@@ -232,7 +234,7 @@ Search the web (fragrantica.com is best) and suggest 5–8 real perfumes I have 
 Use my reviews and taste profile: avoid what I dislike, explain honestly where the risk is.
 
 Reply with ONLY JSON:
-{"items":[{"name":"","brand":"","year":null,"family":null,"concentration":null,"fragrantica_url":"","top_notes":[],"heart_notes":[],"base_notes":[],"why":"2–3 sentences in ${lang} addressed to me informally: why it fits my request and taste, compared with perfumes I rated","risk":"1 sentence in ${lang} or null","match":"high"|"medium"|"low"}]}
+{"items":[{"name":"","brand":"","year":null,"family":null,"concentration":null,"fragrantica_url":"","top_notes":[],"heart_notes":[],"base_notes":[],"accords":["Fragrantica main accords, lowercase"],"why":"2–3 sentences in ${lang} addressed to me informally: why it fits my request and taste, compared with perfumes I rated","risk":"1 sentence in ${lang} or null","match":"high"|"medium"|"low"}]}
 Notes in English lowercase. fragrantica_url must be an exact perfume page URL ending with -<number>.html.`,
   }];
   let res: Anthropic.Message | null = null;

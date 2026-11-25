@@ -79,7 +79,7 @@ export function More({ perfumes, terms }: { perfumes: Perfume[]; terms: Term[] }
       {(insight.loved.length > 0 || insight.avoid.length > 0) && (
         <section className="card">
           <h2>Notes by my ratings</h2>
-          <p className="muted small">Notes that appear in 3+ rated perfumes. ★ is my average for them, ×n is how many.</p>
+          <p className="muted small">Notes that appear in 3+ rated perfumes. ★ is my average for them, ×n is how many. Just for curiosity: a single note says little, what matters is which notes dominate and how they combine.</p>
           {insight.loved.length > 0 && (
             <>
               <p className="small"><b>I tend to like</b></p>
