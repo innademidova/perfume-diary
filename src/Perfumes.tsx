@@ -366,7 +366,7 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
         {p.brand && <p className="eyebrow">{p.brand}</p>}
         <h1 className="detail-title">{p.name}</h1>
         {p.lookup_status === 'queued' && (
-          <p className="ai-filled">⏳ Waiting for Claude to fill in brand, notes and photo. Ask Claude Code: «обработай очередь»</p>
+          <p className="ai-filled">⏳ Waiting for Claude to fill in brand, notes and photo</p>
         )}
         <p className="muted">{[p.concentration, p.year, p.perfumer && `by ${p.perfumer}`].filter(Boolean).join(' · ')}</p>
 

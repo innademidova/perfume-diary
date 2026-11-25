@@ -5,7 +5,7 @@ import {
   type Perfume, type Term, type Candidate,
 } from './lib'
 import { Stars, Thumb, Icon, Meter, usePhotoUrls } from './ui'
-import { TwoWays, QUEUE_HINT, useAI } from './ai'
+import { TwoWays, useAI } from './ai'
 import { canon, buildModel } from './predict'
 import { go, back } from './App'
 
@@ -233,7 +233,7 @@ export function ImportScreen({ perfumes, initialStatus, onAdded }: {
       {step === 'done' && (
         <section className="card">
           {added === -1
-            ? <><p>📮 Photos are in the queue.</p><p className="muted small">{QUEUE_HINT}</p></>
+            ? <><p>📮 Photos are in the queue.</p></>
             : <p>✨ Added {added} perfume{added === 1 ? '' : 's'}.</p>}
           <button className="btn primary" onClick={() => location.replace('#' + home)}>Open {wish ? 'Want to try' : 'Perfumes'}</button>
         </section>
@@ -446,7 +446,7 @@ export function NotePassport({ note, perfumes, terms, onTerm, onFilter }: {
       <section className="card">
         <h2>What it smells like</h2>
         {term && (term as Term & { ai_status?: string }).ai_status === 'queued' ? (
-          <><p className="queued">⏳ Waiting for Claude to explain it</p><p className="muted small">{QUEUE_HINT}</p></>
+          <><p className="queued">⏳ Waiting for Claude to explain it</p></>
         ) : term?.smell || term?.description ? (
           <>
             {term.smell && <p className="review">{term.smell}</p>}

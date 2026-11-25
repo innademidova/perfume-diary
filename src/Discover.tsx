@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, callAI, formatDate, type Perfume } from './lib'
 import { Icon } from './ui'
-import { TwoWays, QUEUE_HINT } from './ai'
+import { TwoWays } from './ai'
 import { findSame } from './Extra'
 import { go } from './App'
 
@@ -117,7 +117,7 @@ function RecResult({ req, perfumes, onAdded, onRemove }: {
         <button className="btn-icon" onClick={onRemove} aria-label="Remove"><Icon name="close" /></button>
       </div>
       {req.status === 'queued' ? (
-        <><p className="queued">⏳ In the queue</p><p className="muted small">{QUEUE_HINT}</p></>
+        <><p className="queued">⏳ In the queue</p></>
       ) : req.items.length === 0 ? (
         <p className="muted">Nothing found this time.</p>
       ) : (

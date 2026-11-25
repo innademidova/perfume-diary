@@ -34,7 +34,6 @@ type AI = {
 export const AIContext = createContext<AI>(null!)
 export const useAI = () => useContext(AIContext)
 
-export const QUEUE_HINT = 'Free option: it will appear here after you write «обработай очередь» to Claude Code on your computer. Need it right away? Use the button below (~1¢).'
 
 // Два способи: зараз через API (платно, копійки) або в чергу для Claude Code (безкоштовно, пізніше)
 export function TwoWays({ now, later, busy, nowLabel = 'Now', laterLabel = 'Add to queue' }: {
@@ -46,7 +45,6 @@ export function TwoWays({ now, later, busy, nowLabel = 'Now', laterLabel = 'Add 
         <Icon name="spark" /> {busy ? 'Thinking…' : nowLabel}
       </button>
       {later && <button className="btn sm" onClick={later} disabled={busy}>{laterLabel}</button>}
-      <p className="muted small">«{nowLabel}» uses the paid API (~1¢). The queue is free: Claude Code handles it on the computer.</p>
     </div>
   )
 }
@@ -112,7 +110,6 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
     <section className="card forecast">
       <h2>AI forecast</h2>
       <p className="queued">⏳ In the queue since {formatDate(pr.requested_at.slice(0, 10))}</p>
-      <p className="muted small">{QUEUE_HINT}</p>
       <div className="row">
         <button className="btn sm" onClick={now} disabled={busy}><Icon name="spark" /> {busy ? 'Thinking…' : 'Do it now instead'}</button>
         <button className="btn ghost sm" onClick={cancel}>Cancel request</button>
@@ -183,7 +180,6 @@ export function ProfileCard({ ratedCount }: { ratedCount: number }) {
       {profile?.refresh_requested ? (
         <>
           <p className="queued">⏳ Update requested</p>
-          <p className="muted small">{QUEUE_HINT}</p>
           <button className="btn sm" onClick={now} disabled={busy}><Icon name="spark" /> {busy ? 'Thinking…' : 'Do it now instead'}</button>
         </>
       ) : (
@@ -212,7 +208,6 @@ export function AccuracyCard({ perfumes }: { perfumes: Perfume[] }) {
         {pairs.length > 0 && <><dt>Checked</dt><dd>{hits} of {pairs.length} within ½★</dd></>}
         {pairs.length > 0 && <><dt>Average miss</dt><dd>{mae.toFixed(1)}★</dd></>}
       </dl>
-      {queued > 0 && <p className="muted small">{QUEUE_HINT}</p>}
     </section>
   )
 }
