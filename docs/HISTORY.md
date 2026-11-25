@@ -20,7 +20,7 @@
    app shows "Clues from my diary" (similar rated perfumes, her average per note) and "Notes by my ratings" in
    Insights instead of a fake number.
 9. **AI via Claude Code queue** (her choice: free on her subscription): "Ask for a forecast" button queues a request,
-   she says «обработай очередь» in Claude Code, Claude writes forecasts and the taste profile into Supabase.
+   she asks Claude Code to process the queue, Claude writes forecasts and the taste profile into Supabase.
    Forecast vs reality is shown after she rates; accuracy in Insights. First profile + first forecast (Orza, ~2.5★)
    written by Claude.
 10. **Agreed next:** AI autofill on the add form using Gemini (free) — waiting for her API key.
@@ -43,7 +43,8 @@
 22. Add from photo (screenshot/bottles/notebook → recognize → skip duplicates → find versions → add; or queue), perfume links (similar/alternative/twin, 15 seeded from her reviews) with side-by-side Compare, Note passport (/n/<note>: explanation via AI or queue, saved to glossary; her average; often paired; perfumes by section). Tapping notes anywhere opens the passport.
 23. Discover tab: AI recommendations beyond the diary (free-text request or «Find similar outside my diary» on a perfume card), results with photo, why/risk in Ukrainian, match level, one-tap «Want to try» (reason = AI recommendation). Now (~3–5¢, ~40 s) or queue.
 24. Taste profile: «Update now / Add to queue» buttons always visible (no «Update anyway» dropdown).
-25. Removed «обработай очередь» hints from the app (she knows how the queue works).
+25. Removed "process the queue" hints from the app (she knows how the queue works).
 26. Queue forecasts now read the perfume's Fragrantica page (accords, season votes, user reviews) via Chrome before predicting.
 27. Forecast card: «Forecast now» (diary only) and «With reviews» (web search of reviews first, ~2–4¢) + queue.
 28. Settings screen: name, change password, AI language (stored in user_settings, read by the Edge Function and the queue — no redeploy), backup, sign out.
+29. Repo switched to English-only (no Cyrillic in code, prompts, docs, commits). Repo made public again, Pages back on.

@@ -1,5 +1,5 @@
-// Прогнози та профіль смаку від ІІ.
-// Застосунок лише ставить запити в чергу; обробляє їх Claude Code (scripts/ai-queue.mjs).
+// AI forecasts and taste profile.
+// Queued requests are processed by Claude Code (scripts/ai-queue.mjs); "now" buttons call the Edge Function.
 import { createContext, useContext, useState } from 'react'
 import { supabase, formatDate, callAI, type Perfume } from './lib'
 import { Stars, Icon } from './ui'
@@ -35,7 +35,7 @@ export const AIContext = createContext<AI>(null!)
 export const useAI = () => useContext(AIContext)
 
 
-// Два способи: зараз через API (платно, копійки) або в чергу для Claude Code (безкоштовно, пізніше)
+// Two ways: now via the API (paid, cents) or into the queue for Claude Code (free, later)
 export function TwoWays({ now, later, busy, nowLabel = 'Now', laterLabel = 'Add to queue', alt }: {
   now: () => void; later?: () => void; busy: boolean; nowLabel?: string; laterLabel?: string
   alt?: { label: string; run: () => void }
@@ -60,7 +60,7 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
-  // withReviews: перед прогнозом ІІ шукає відгуки в інтернеті (дорожче, ~2–4¢)
+  // withReviews: the AI searches the web for reviews before forecasting (pricier, ~2–4¢)
   const now = async (withReviews = false) => {
     setBusy(true); setErr('')
     try { savePrediction(await callAI<Prediction>({ action: 'forecast', perfume_id: perfume.id, with_reviews: withReviews }), perfume.id) }
@@ -81,7 +81,7 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
     if (error) alert(error.message); else savePrediction(null, perfume.id)
   }
 
-  // Уже оцінено: показуємо прогноз поруч із реальністю
+  // Already rated: show the forecast next to reality
   if (rated) {
     if (pr?.status !== 'done' || pr.rating == null) return null
     const diff = perfume.rating! - pr.rating

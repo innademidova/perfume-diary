@@ -30,16 +30,16 @@ export const emptyFilters: Filters = {
 }
 
 export const isWish = (p: Perfume) => p.status === 'wishlist'
-// Уже є, але ще без оцінки
+// Owned but not rated yet
 export const isToRate = (p: Perfume) => !isWish(p) && p.rating == null
 
-// Вигляд списку: плитка чи рядки. На телефоні за замовчуванням рядки, на ширших екранах — плитка
+// List view: grid or rows. Rows by default on phones, grid on wider screens
 function useLayout(): ['grid' | 'list', (v: 'grid' | 'list') => void] {
   const [v, setV] = useState<'grid' | 'list'>(() => {
     try {
       const saved = localStorage.getItem('layout')
       if (saved === 'grid' || saved === 'list') return saved
-    } catch { /* приватний режим */ }
+    } catch { /* private mode */ }
     return window.matchMedia('(min-width: 700px)').matches ? 'grid' : 'list'
   })
   return [v, (x) => { setV(x); try { localStorage.setItem('layout', x) } catch { /* ignore */ } }]
@@ -48,7 +48,7 @@ function useLayout(): ['grid' | 'list', (v: 'grid' | 'list') => void] {
 const uniq = (xs: (string | null | undefined)[]) =>
   [...new Set(xs.filter((x): x is string => !!x && !!x.trim()))].sort((a, b) => a.localeCompare(b, 'uk'))
 
-// ---------- Список ----------
+// ---------- List ----------
 
 export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
   mode: Mode
@@ -287,7 +287,7 @@ export function PerfumeList({ mode, perfumes: all, filters: f, setFilters }: {
   )
 }
 
-// ---------- Картка аромату ----------
+// ---------- Perfume card ----------
 
 export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete, onNote, children }: {
   children?: ReactNode
@@ -511,7 +511,7 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
   )
 }
 
-// ---------- Форма ----------
+// ---------- Form ----------
 
 type Draft = Omit<Perfume, 'id' | 'created_at' | 'updated_at' | 'year' | 'price_per_ml' | 'volume_ml'> & {
   year: string; price_per_ml: string; volume_ml: string
@@ -543,8 +543,8 @@ const num = (s: string) => {
 export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved }: {
   perfume?: Perfume
   perfumes: Perfume[]
-  wish?: boolean      // новий запис у «Хочу спробувати»
-  convert?: boolean   // переносимо з «Хочу спробувати» у спробувані
+  wish?: boolean      // new entry in "Want to try"
+  convert?: boolean   // moving from "Want to try" to tried
   onSaved: (p: Perfume) => void
 }) {
   const [d, setD] = useState<Draft>(() => {
@@ -555,7 +555,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [dropPhoto, setDropPhoto] = useState(false)
-  const [aiFid, setAiFid] = useState<string | null>(null)       // фото флакона знайдене ІІ, завантажимо при збереженні
+  const [aiFid, setAiFid] = useState<string | null>(null)       // bottle photo found by the AI, uploaded on save
   const [aiSource, setAiSource] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [finding, setFinding] = useState(false)
@@ -584,7 +584,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
     } catch (e) { setError(e instanceof Error ? e.message : String(e)) }
     setFinding(false)
   }
-  // Бренд пишемо так, як він уже є в щоденнику («By Kilian» → «Kilian»)
+  // Write the brand the way it already is in the diary ("By Kilian" → "Kilian")
   const sameBrand = (b: string) => norm(b).replace(/^by /, '')
   const choose = (c: Candidate) => {
     const known = c.brand ? brands.find(b => sameBrand(b) === sameBrand(c.brand)) : undefined
@@ -598,7 +598,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
     setAiSource(c.fragrantica_url || null)
     setCandidates(null)
   }
-  // Безкоштовний шлях: чернетка з назвою, Claude Code заповнить її з черги
+  // Free path: a draft with the name, Claude Code fills it from the queue
   const queueLookup = async () => {
     if (!query.trim()) return
     setBusy(true); setError('')
@@ -624,7 +624,7 @@ export function PerfumeForm({ perfume, perfumes, wish: newWish, convert, onSaved
       if (file) photo_path = await uploadPhoto(file)
       else if (aiFid) {
         try { photo_path = (await callAI<{ path: string }>({ action: 'image', fragrantica_id: aiFid })).path }
-        catch { /* без фото теж можна зберегти */ }
+        catch { /* can be saved without a photo too */ }
       }
       const row = {
         ...d,

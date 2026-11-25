@@ -7,7 +7,7 @@ export function Stars({ value, onChange, size = 'md' }: {
   size?: 'sm' | 'md' | 'lg'
 }) {
   const v = value ?? 0
-  // Повторне натискання на ту саму зірку дає половинку, третє — скидає
+  // Tapping the same star again gives a half, a third tap clears it
   const tap = (i: number) => {
     if (!onChange) return
     if (v === i) onChange(i - 0.5)

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Публічний ключ: дані захищені правилами доступу в базі (RLS) і входом за паролем
+// Publishable key: data is protected by database access rules (RLS) and the password login
 export const supabase = createClient(
   'https://eyczhhvxuofvfeoqwfbg.supabase.co',
   'sb_publishable_cwDfk3jZoFSZAnyAsO2kjQ_zmUNoXog',
@@ -76,7 +76,7 @@ export const COMMON_NOTES = [
 export const STATUSES: Record<string, string> = {
   decant: 'Decant', sample: 'Sample', bottle: 'Bottle', wishlist: 'Want to try',
 }
-// Статуси для ароматів, які вже спробувала (без «хочу спробувати»)
+// Statuses for perfumes already tried (without "want to try")
 export const TRIED_STATUSES: Record<string, string> = {
   decant: 'Decant', sample: 'Sample', bottle: 'Bottle',
 }
@@ -113,7 +113,7 @@ export const allNotes = (p: Perfume) => [...p.top_notes, ...p.heart_notes, ...p.
 
 export const norm = (s: string) => s.toLowerCase().replace(/[’ʼ`]/g, "'").trim()
 
-// Термін зі словника згадується в ароматі, якщо його назва є в нотах або відгуку
+// A glossary term is mentioned in a perfume if its name appears in the notes or the review
 export function mentions(p: Perfume, t: Term) {
   const name = norm(t.name)
   if (name.length < 2) return false
@@ -146,7 +146,7 @@ export function formatDate(d: string | null) {
   })
 }
 
-// --- Фото ---
+// --- Photos ---
 
 const urlCache = new Map<string, { url: string; exp: number }>()
 
@@ -164,7 +164,7 @@ export async function photoUrls(paths: string[]) {
   return out
 }
 
-// Зменшуємо фото з iPhone перед завантаженням: до 1400px по довшій стороні, JPEG
+// Shrink iPhone photos before upload: up to 1400px on the long side, JPEG
 export async function compressImage(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file)
   const max = 1400
@@ -192,7 +192,7 @@ export async function removePhoto(path: string | null) {
   if (path) await supabase.storage.from('photos').remove([path])
 }
 
-// --- Серверна функція ІІ (Claude API) ---
+// --- AI server function (Claude API) ---
 
 export async function callAI<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('ai', { body })

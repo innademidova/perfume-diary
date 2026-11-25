@@ -1,4 +1,4 @@
-// Додавання за фото, зв'язки між ароматами та порівняння, паспорт ноти.
+// Add from photo, links between perfumes and Compare, Note passport.
 import { useMemo, useState } from 'react'
 import {
   supabase, callAI, compressImage, allNotes, norm, money, STATUSES, SEASONS, LONGEVITY, SILLAGE,
@@ -12,11 +12,11 @@ import { go, back } from './App'
 export type PerfumeLink = { id: string; a: string; b: string; kind: string; note: string | null; created_at: string }
 export const LINK_KINDS: Record<string, string> = { similar: 'Similar', alternative: 'Alternative', twin: 'Twin' }
 
-// Однаковий аромат, навіть якщо бренд написано трохи інакше («By Kilian» / «Kilian», «D&G» / «Dolce & Gabbana»)
+// Same perfume even if the brand is written differently ("By Kilian" / "Kilian", "D&G" / "Dolce & Gabbana")
 const clean = (s: string | null | undefined) => norm(s ?? '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
-  .replace(/^by /, '').replace(/&/g, ' and ').replace(/[^a-z0-9а-яіїєґ]+/g, ' ').trim()
-// Назва без концентрації: «My Devotion Eau de Parfum Intense» ≈ «My Devotion» + «EDP Intense»
+  .replace(/^by /, '').replace(/&/g, ' and ').replace(/[^a-z0-9\u0430-\u044f\u0456\u0457\u0454\u0491]+/g, ' ').trim()
+// Name without concentration: "My Devotion Eau de Parfum Intense" ≈ "My Devotion" + "EDP Intense"
 const bare = (s: string | null | undefined) => clean(s)
   .replace(/\b(eau de parfum|eau de toilette|eau de cologne|extrait de parfum|edp|edt|edc|parfum|extrait|intense)\b/g, ' ')
   .replace(/\s+/g, ' ').trim()
@@ -38,13 +38,13 @@ const toBase64 = (blob: Blob) => new Promise<string>((res, rej) => {
   r.readAsDataURL(blob)
 })
 
-// ---------- Додавання за фото / скріншотом ----------
+// ---------- Add from photo / screenshot ----------
 
 type Item = {
   brand: string; name: string; concentration: string | null; price_per_ml: number | null
   rating10: number | null; review: string | null
   pick: boolean; dup?: Perfume
-  candidates?: Candidate[]; chosen?: number   // -1 = додати лише з назвою
+  candidates?: Candidate[]; chosen?: number   // -1 = add with the name only
 }
 
 export function ImportScreen({ perfumes, initialStatus, onAdded }: {
@@ -83,7 +83,7 @@ export function ImportScreen({ perfumes, initialStatus, onAdded }: {
     setBusy('')
   }
 
-  // Безкоштовний шлях: фото йдуть у чергу, Claude Code розпізнає їх на комп'ютері
+  // Free path: photos go to the queue, Claude Code recognizes them on the computer
   const queue = async () => {
     setError('')
     try {
@@ -126,7 +126,7 @@ export function ImportScreen({ perfumes, initialStatus, onAdded }: {
       const c = it.chosen != null && it.chosen >= 0 ? it.candidates?.[it.chosen] : undefined
       let photo_path: string | null = null
       if (c?.fragrantica_id) {
-        try { photo_path = (await callAI<{ path: string }>({ action: 'image', fragrantica_id: c.fragrantica_id })).path } catch { /* без фото */ }
+        try { photo_path = (await callAI<{ path: string }>({ action: 'image', fragrantica_id: c.fragrantica_id })).path } catch { /* no photo */ }
       }
       const known = perfumes.find(p => p.brand && clean(p.brand) === clean(c?.brand ?? it.brand))?.brand
       const row = {
@@ -242,7 +242,7 @@ export function ImportScreen({ perfumes, initialStatus, onAdded }: {
   )
 }
 
-// ---------- Зв'язки «схожий / альтернатива / близнюк» ----------
+// ---------- Links: similar / alternative / twin ----------
 
 export function LinksCard({ perfume: p, perfumes, links, onLinksChange }: {
   perfume: Perfume; perfumes: Perfume[]; links: PerfumeLink[]; onLinksChange: (l: PerfumeLink[]) => void
@@ -323,7 +323,7 @@ export function LinksCard({ perfume: p, perfumes, links, onLinksChange }: {
   )
 }
 
-// ---------- Порівняння двох ароматів ----------
+// ---------- Compare two perfumes ----------
 
 export function Compare({ a, b }: { a?: Perfume; b?: Perfume }) {
   const { predictions } = useAI()
@@ -378,7 +378,7 @@ export function Compare({ a, b }: { a?: Perfume; b?: Perfume }) {
   )
 }
 
-// ---------- Паспорт ноти ----------
+// ---------- Note passport ----------
 
 export function NotePassport({ note, perfumes, terms, onTerm, onFilter }: {
   note: string; perfumes: Perfume[]; terms: Term[]; onTerm: (t: Term) => void; onFilter: (note: string) => void
@@ -395,7 +395,7 @@ export function NotePassport({ note, perfumes, terms, onTerm, onFilter }: {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
-  // Ноти, які найчастіше трапляються разом із цією
+  // Notes that most often appear together with this one
   const pairs = useMemo(() => {
     const m = new Map<string, number>()
     withNote.forEach(p => new Set(allNotes(p).map(canon)).forEach(n => { if (n !== key) m.set(n, (m.get(n) ?? 0) + 1) }))

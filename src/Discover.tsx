@@ -1,4 +1,4 @@
-// Асистент-підбирач: рекомендації ароматів поза щоденником.
+// Discover: AI recommendations of perfumes outside the diary.
 import { useEffect, useState } from 'react'
 import { supabase, callAI, formatDate, type Perfume } from './lib'
 import { Icon } from './ui'
@@ -95,7 +95,7 @@ function RecResult({ req, perfumes, onAdded, onRemove }: {
     setAdding(it.name)
     let photo_path: string | null = null
     if (it.fragrantica_id) {
-      try { photo_path = (await callAI<{ path: string }>({ action: 'image', fragrantica_id: it.fragrantica_id })).path } catch { /* без фото */ }
+      try { photo_path = (await callAI<{ path: string }>({ action: 'image', fragrantica_id: it.fragrantica_id })).path } catch { /* no photo */ }
     }
     const { data, error } = await supabase.from('perfumes').insert({
       name: it.name, brand: it.brand || null, year: it.year, family: it.family, concentration: it.concentration,

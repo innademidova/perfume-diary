@@ -1,12 +1,12 @@
-// Налаштування: акаунт (ім'я, пароль), мова відповідей ІІ, резервна копія, вихід.
-// Мова зберігається в таблиці user_settings — серверна функція й черга читають її звідти, без редеплою.
+// Settings: account (name, password), AI language, backup, sign out.
+// The language is stored in user_settings; the Edge Function and the queue read it from there, no redeploy needed.
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase, type Perfume, type Term } from './lib'
 import { Icon } from './ui'
 
 export type UserSettings = { display_name: string | null; ai_language: string }
 
-// Мови, якими ІІ пише прогнози, профіль смаку, пояснення нот і підбірки
+// Languages the AI can write forecasts, the taste profile, note explanations and picks in
 export const AI_LANGUAGES = ['Ukrainian', 'English', 'Polish', 'German', 'French', 'Spanish', 'Italian']
 
 export async function loadSettings(): Promise<UserSettings> {

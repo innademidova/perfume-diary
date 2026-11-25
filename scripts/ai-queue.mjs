@@ -1,7 +1,7 @@
-// Обробка черги ІІ через Claude Code.
-//   node scripts/ai-queue.mjs export <file.json>  — вивантажує чергу та весь контекст щоденника
-//   node scripts/ai-queue.mjs apply  <file.json>  — записує готові прогнози / профіль
-// Формат файла для apply:
+// AI queue processing by Claude Code.
+//   node scripts/ai-queue.mjs export <file.json>  — exports the queue and the whole diary context
+//   node scripts/ai-queue.mjs apply  <file.json>  — writes finished forecasts / profile
+// apply file format:
 //   { "profile": { "profile": "...", "loves": [], "avoids": [] } | null,
 //     "lookups": [{ "perfume_id": "...", "name": "", "brand": "", "year": 2020, "perfumer": "", "concentration": "EDP",
 //                   "family": "", "top_notes": [], "heart_notes": [], "base_notes": [], "fragrantica_id": "12345" }],
@@ -11,7 +11,7 @@
 //     "terms": [{ "id": "...", "kind": "note", "smell": "...", "description": "..." }],
 //     "predictions": [{ "perfume_id": "...", "rating": 2.5, "confidence": "medium",
 //                       "summary": "...", "likes": [], "risks": [] }] }
-// Логін береться з .env.local (PERFUME_EMAIL, PERFUME_PASSWORD) — файл не потрапляє в git.
+// Login comes from .env.local (PERFUME_EMAIL, PERFUME_PASSWORD); the file is git-ignored.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
@@ -35,9 +35,9 @@ if (cmd === 'export') {
     sb.from('import_requests').select('*').eq('status', 'queued'),
   ])
   const { data: recs } = await sb.from('recommend_requests').select('*').eq('status', 'queued')
-  // мова й ім'я з Settings: усі тексти (прогнози, профіль, пояснення, підбірки) писати цією мовою
+  // language and name from Settings: write all texts (forecasts, profile, explanations, picks) in this language
   const { data: settings } = await sb.from('user_settings').select('ai_language, display_name').maybeSingle()
-  // фото з черги зберігаємо поруч із файлом контексту, щоб їх можна було переглянути
+  // save queued photos next to the context file so they can be viewed
   const imgDir = join(dirname(file), 'imports'); mkdirSync(imgDir, { recursive: true })
   const importItems = []
   for (const r of imports ?? []) {
@@ -55,14 +55,14 @@ if (cmd === 'export') {
     current_profile: profile,
     rated_count: rated.length,
     queue: queue.map(q => strip(perfumes.find(p => p.id === q.perfume_id))),
-    // чернетки: знайти точну версію на Fragrantica, ноти та фото (fragrantica_id)
-    // фото/скріншоти: розпізнати аромати, додати через scripts/add-perfumes.mjs (пропускаючи дублікати), потім imports_done
+    // drafts: find the exact Fragrantica version, notes and photo (fragrantica_id)
+    // photos/screenshots: recognize perfumes, add via scripts/add-perfumes.mjs (skipping duplicates), then imports_done
     imports: importItems,
-    // підбір ароматів поза щоденником: 5–8 варіантів (див. CLAUDE.md), результати → "recommendations"
+    // picks outside the diary: 5–8 options (see CLAUDE.md), results → "recommendations"
     recommend: (recs ?? []).map(r => ({ id: r.id, query: r.query,
       based_on: r.perfume_id ? strip(perfumes.find(p => p.id === r.perfume_id) ?? {}) : null })),
     diary_names: perfumes.map(p => `${p.brand ?? ''} ${p.name}`.trim()),
-    // ноти, які треба пояснити українською (паспорт ноти)
+    // notes to explain in ai_language (note passport)
     terms_to_explain: terms.filter(t => t.ai_status === 'queued').map(t => ({ id: t.id, name: t.name })),
     lookups: perfumes.filter(p => p.lookup_status === 'queued').map(p => ({ perfume_id: p.id, name: p.name, brand: p.brand, status: p.status })),
     rated: rated.map(strip),

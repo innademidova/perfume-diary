@@ -1,9 +1,9 @@
-// Підказки з мого щоденника: схожі аромати та статистика нот.
-// Числовий прогноз за нотами перевіряли (leave-one-out): він не точніший за мою середню оцінку,
-// тож показуємо лише підказки, а прогноз робитиме ІІ з урахуванням текстів відгуків.
+// Hints from my diary: similar perfumes and note statistics.
+// A numeric note-based forecast was tested (leave-one-out): it is no better than my average rating,
+// so we only show hints; forecasts are made by the AI using the review texts.
 import type { Perfume } from './lib'
 
-// Географічні та уточнювальні слова, які не змінюють суть ноти
+// Geographic and qualifying words that don't change what the note is
 const ORIGINS = /\b(madagascar|madagascan|turkish|bulgarian|egyptian|indian|italian|amalfi|calabrian|haitian|java|virginia|virginian|damask|may|tunisian|sicilian|chinese|australian|mexican|provencal|somalian|absolute|oil|essence|extract|accord)\b/g
 
 const SYNONYMS: Record<string, string> = {
@@ -48,7 +48,7 @@ export type Model = {
   idf: Map<string, number>
 }
 
-const SHRINK = 2 // скільки «віртуальних середніх оцінок» додаємо, щоб 1 аромат не робив висновків
+const SHRINK = 2 // how many "virtual average ratings" we add so a single perfume doesn't drive conclusions
 
 export function buildModel(perfumes: Perfume[]): Model {
   const rated = perfumes.filter(p => p.status !== 'wishlist' && p.rating != null)
@@ -83,7 +83,7 @@ function similarity(m: Model, a: Perfume, b: Perfume) {
 
 export type Clues = {
   similar: { perfume: Perfume; sim: number }[]
-  notes: (NoteStat & { delta: number })[]   // ноти цього аромату, які вже траплялись в оцінених
+  notes: (NoteStat & { delta: number })[]   // notes of this perfume that already appeared in rated ones
 }
 
 export function clues(m: Model, p: Perfume): Clues {
@@ -101,7 +101,7 @@ export function clues(m: Model, p: Perfume): Clues {
   return { similar, notes }
 }
 
-// Ноти, за якими вже є висновки — для сторінки Insights
+// Notes with enough data for conclusions — for the Insights page
 export function noteInsights(m: Model) {
   const sig = [...m.notes.values()].filter(x => x.n >= 3)
   return {

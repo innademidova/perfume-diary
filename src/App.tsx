@@ -10,7 +10,7 @@ import { Discover } from './Discover'
 import { Settings } from './Settings'
 import { ImportScreen, LinksCard, Compare, NotePassport, type PerfumeLink } from './Extra'
 
-// Маршрути в адресі після #, щоб працювало на GitHub Pages
+// Routes live after # in the URL so it works on GitHub Pages
 export type Route =
   | { view: 'list' } | { view: 'wishlist' } | { view: 'perfume'; id: string }
   | { view: 'perfume-edit'; id?: string; wish?: boolean; convert?: boolean }
@@ -38,7 +38,7 @@ function parse(hash: string): Route {
   return { view: 'list' }
 }
 
-// Скільки кроків ми пройшли всередині застосунку — щоб «назад» не виводив із нього
+// How many steps we went inside the app, so "back" doesn't leave it
 let depth = 0
 export const go = (path: string) => { depth++; location.hash = path }
 export const back = (fallback: string) => {

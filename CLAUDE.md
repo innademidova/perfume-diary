@@ -11,9 +11,12 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
 
 ## Hard rules from the owner
 
-- **App UI is English.** All other non-English text (code comments, README, commit messages, repo
-  description, glossary entries) must be **Ukrainian. Never Russian anywhere in the project.**
+- **Everything in the repo is English, no Cyrillic at all:** app UI, code comments, prompts, scripts, docs,
+  README, schema comments, commit messages (her rule since 2026-11-26; earlier commits were Ukrainian, don't rewrite
+  history). Exceptions are her data only (reviews, glossary texts in the database), never files in the repo.
   Chat replies to the owner: in the language she writes in, plain and non-technical.
+- AI output language (forecasts, profile, note explanations, Discover picks) = `user_settings.ai_language`, set by her
+  in the app (Settings). Never hardcode it in prompts.
 - Her reviews are kept exactly in her words (Ukrainian); only punctuation may be fixed.
   Notes are stored in **English, lowercase** (matches the UI's note suggestions and filters).
 - Design: soft pastel pink + powder blue, modern sans (Plus Jakarta Sans), rounded translucent
@@ -33,6 +36,8 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
 - `src/predict.ts` note statistics + "similar perfumes" (no numeric forecast — see INSIGHTS).
 - `src/Extra.tsx` add-from-photo, perfume links + Compare, Note passport. `src/Discover.tsx` AI recommendations
   (Discover tab; `recommend` action uses web search, ~3–5¢; results stored in `recommend_requests`).
+- `src/Settings.tsx` Settings (sidebar on desktop, gear in Insights on phone): name, password, AI language, backup,
+  sign out.
 - `src/ai.tsx` AI forecast card, taste profile card, accuracy card (queue-based, see below).
 - `supabase/schema.sql` full schema; apply changes via SQL (append new statements to this file too).
 - `scripts/sql.mjs` run SQL against the database (schema changes; token from the Supabase CLI login in Keychain).
@@ -54,10 +59,11 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
   - Sections: **Rated** = not wishlist & rating set · **To rate** = not wishlist & rating null ·
     **Want to try** = status `wishlist`.
 - `terms`: glossary (molecule/note/accord/perfumer/term). Name in English so it auto-links to perfumes whose
-  notes/review contain it; smell/description in Ukrainian.
-- `predictions`: one per perfume — status `queued`|`done`, rating, confidence, summary (Ukrainian, her voice),
+  notes/review contain it; smell/description in `ai_language`.
+- `predictions`: one per perfume — status `queued`|`done`, rating, confidence, summary (`ai_language`, her voice),
   likes[], risks[].
-- `taste_profile`: one row — profile text (Ukrainian), loves[], avoids[], based_on (rated count), refresh_requested.
+- `user_settings`: one row — display_name, ai_language (edited in Settings).
+- `taste_profile`: one row — profile text (`ai_language`), loves[], avoids[], based_on (rated count), refresh_requested.
 - Storage bucket `photos` (private, signed URLs), path `<user_id>/<uuid>.jpg`.
 
 ## Access in a new session (what persists on this Mac)
@@ -82,17 +88,20 @@ After deploy the app updates itself: the service worker uses skipWaiting + clien
 
 Every AI action in the app offers **"… now"** (paid Claude API via the Edge Function; lookup ≈ 1–3¢ because web
 search is $10 / 1000 searches, forecast < 1¢) and **"Add to queue"** (free: processed by Claude Code on her
-subscription when she says «обработай очередь»). She wants to decide per case depending on urgency.
+subscription when she asks to process the queue). She wants to decide per case depending on urgency.
 
-## Workflow: "обработай очередь" (process the AI queue)
+## Workflow: process the AI queue (she asks in Russian/Ukrainian)
+
+**Language:** write all AI texts in `ai_language` from the export (Settings → Preferences, table `user_settings`;
+default Ukrainian). The Edge Function reads the same setting.
 
 The app only queues requests; Claude Code is the model. When she asks to process the queue:
 
 1. `node scripts/ai-queue.mjs export /tmp/…/ctx.json` → queue, all rated perfumes with reviews, glossary,
    current profile, past predictions vs actual.
 2. If `profile_requested` (or ≥3 new ratings since `based_on`), rewrite the taste profile from **all review
-   texts**, not just notes. Keep it ~3 short paragraphs in Ukrainian addressed to her ("ти"), plus loves/avoids tags.
-3. For each queued perfume write a forecast: rating (0.5 steps), confidence, a 3–5 sentence summary in Ukrainian
+   texts**, not just notes. Keep it ~3 short paragraphs in `ai_language` addressed to her informally, plus loves/avoids tags.
+3. For each queued perfume write a forecast: rating (0.5 steps), confidence, a 3–5 sentence summary in `ai_language`
    in her style (what she'll probably smell, what she'll like/dislike, compare with perfumes she rated), likes/risks
    tags. Use her patterns (see INSIGHTS) and similar rated perfumes. Learn from past misses.
    **Before each forecast read the perfume's Fragrantica page in Chrome** (claude-in-chrome `get_page_text`; reading
@@ -108,10 +117,10 @@ The app only queues requests; Claude Code is the model. When she asks to process
    `imports_done` with a short result.
 4c. For each item in `recommend` (Discover tab): suggest 5–8 real perfumes NOT in `diary_names` that fit the query
    (and `based_on` perfume if given) and her taste; verify each on Fragrantica (exact page + id, notes); `why` = 2–3
-   sentences in Ukrainian ("ти") comparing with her rated perfumes, `risk` = 1 sentence or null, `match`. Put them in
+   sentences in `ai_language` (informal) comparing with her rated perfumes, `risk` = 1 sentence or null, `match`. Put them in
    `recommendations`.
 4b. For each item in `terms_to_explain`: write `kind`, `smell` (1–2 sentences) and `description` (2–4 sentences) in
-   Ukrainian, addressing her as "ти", and put them in `terms`.
+   `ai_language`, addressing her informally, and put them in `terms`.
 4. For each item in `lookups` (drafts she added by name only): find the exact Fragrantica page (see "Adding perfumes"),
    fill name, brand, year, perfumer, concentration, family, notes and `fragrantica_id` (the script copies the photo).
    Verify the bottle image visually before applying.

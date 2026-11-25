@@ -1,5 +1,5 @@
-// Серверна функція ІІ (Claude Haiku через API): пошук аромату, фото, прогноз, профіль смаку.
-// Ключ і workspace — у секретах Supabase (ANTHROPIC_API_KEY, ANTHROPIC_WORKSPACE_ID); у застосунок не потрапляють.
+// AI Edge Function (Claude Haiku via the API): lookup, photo, forecast, taste profile, scan, note explanations, picks.
+// Key and workspace are Supabase secrets (ANTHROPIC_API_KEY, ANTHROPIC_WORKSPACE_ID); they never reach the app.
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
@@ -20,14 +20,14 @@ const anthropic = new Anthropic({
 const textOf = (content: Anthropic.ContentBlock[]) =>
   content.filter((b): b is Anthropic.TextBlock => b.type === "text").map(b => b.text).join("");
 
-// Модель відповідає JSON-ом у тексті (з веб-пошуком structured outputs не поєднуються)
+// The model replies with JSON in text (structured outputs don't combine with web search)
 function parseJson(text: string) {
   const s = text.indexOf("{"), e = text.lastIndexOf("}");
   if (s < 0 || e < s) throw new Error("AI did not return JSON");
   return JSON.parse(text.slice(s, e + 1));
 }
 
-// ---------- Пошук аромату ----------
+// ---------- Perfume lookup ----------
 
 async function lookup(query: string) {
   const messages: Anthropic.MessageParam[] = [{
@@ -58,7 +58,7 @@ Rules: exact perfume page URLs from fragrantica.com (they end with -<number>.htm
   return { candidates, searches: res!.usage.server_tool_use?.web_search_requests ?? 0 };
 }
 
-// Завантажуємо фото флакона у своє сховище (браузер не може забрати його з чужого сайту)
+// Copy the bottle photo into our Storage (the browser can't fetch it from another site)
 async function saveImage(sb: SupabaseClient, userId: string, fragranticaId: string) {
   if (!/^\d+$/.test(fragranticaId)) throw new Error("Bad id");
   const r = await fetch(`https://fimgs.net/mdimg/perfume/o.${fragranticaId}.jpg`, { headers: { "User-Agent": "Mozilla/5.0" } });
@@ -69,7 +69,7 @@ async function saveImage(sb: SupabaseClient, userId: string, fragranticaId: stri
   return { path };
 }
 
-// ---------- Розпізнавання фото / скріншота ----------
+// ---------- Photo / screenshot recognition ----------
 
 async function scan(image: string, mediaType: string) {
   const res = await anthropic.messages.create({
@@ -89,7 +89,7 @@ Rules: brand and name as the official perfume name in Latin letters (fix typos, 
   return parseJson(textOf(res.content));
 }
 
-// ---------- Паспорт ноти: як пахне ----------
+// ---------- Note passport: how it smells ----------
 
 async function explainNote(sb: SupabaseClient, note: string) {
   const lang = await language(sb);
@@ -114,7 +114,7 @@ Reply with ONLY JSON: {"kind": "note"|"molecule"|"accord", "smell": "1–2 sente
   return data;
 }
 
-// ---------- Контекст щоденника для прогнозів і профілю ----------
+// ---------- Diary context for forecasts and profile ----------
 
 const KEEP = ["name", "brand", "family", "top_notes", "heart_notes", "base_notes", "rating", "longevity", "sillage",
   "seasons", "would_buy", "review", "reason_note", "price_per_ml", "status"];
@@ -134,7 +134,7 @@ async function diary(sb: SupabaseClient) {
     const p = rated.find(r => r.id === x.perfume_id)
     return p ? { name: p.name, predicted: x.rating, actual: p.rating } : null
   }).filter(Boolean);
-  // Стабільний текст (без дат і випадкового порядку), щоб працювало кешування
+  // Stable text (no dates, fixed order) so prompt caching works
   const context = [
     "MY RATED PERFUMES (rating 0–5 stars; my average is low, ~2.2, so 3★ is already good; reviews are in Ukrainian):",
     JSON.stringify(rated.map(slim)),
@@ -145,7 +145,7 @@ async function diary(sb: SupabaseClient) {
   return { all, rated, context };
 }
 
-// Мова відповідей береться з таблиці user_settings (змінюється на сайті в Settings)
+// Output language comes from user_settings (changed on the site in Settings)
 async function language(sb: SupabaseClient) {
   const { data } = await sb.from("user_settings").select("ai_language, display_name").maybeSingle();
   const lang = String(data?.ai_language || "Ukrainian").slice(0, 40);
@@ -158,7 +158,7 @@ async function forecast(sb: SupabaseClient, perfumeId: string, withReviews = fal
   const [{ all, context }, lang] = await Promise.all([diary(sb), language(sb)]);
   const p = all.find(x => x.id === perfumeId);
   if (!p) throw new Error("Perfume not found");
-  // З відгуками: модель спершу шукає в інтернеті, що люди пишуть про аромат (~2–4¢ замість <1¢)
+  // With reviews: the model first searches the web for what people say about the perfume (~2–4¢ instead of <1¢)
   const reviewsTask = withReviews
     ? `\n\nFirst search the web for what people say about this exact perfume (Fragrantica reviews and main accords, Parfumo, Reddit, blogs): which notes dominate, is it powdery, cloying or sweet, longevity and sillage. Weigh these real impressions more than the note list, and mention in the summary what reviews say when it matters for me.`
     : "";
@@ -215,7 +215,7 @@ Reply with ONLY JSON: {"profile": "...", "loves": ["4–7 short tags in ${lang}"
   return data;
 }
 
-// ---------- Асистент-підбирач ----------
+// ---------- Discover picks ----------
 
 async function recommend(sb: SupabaseClient, query: string, perfumeId: string | null) {
   const [{ all, context }, lang] = await Promise.all([diary(sb), language(sb)]);
@@ -260,7 +260,7 @@ Notes in English lowercase. fragrantica_url must be an exact perfume page URL en
   return data;
 }
 
-// ---------- Вхід ----------
+// ---------- Entry point ----------
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });

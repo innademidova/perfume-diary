@@ -1,9 +1,9 @@
-// Додати аромати пачкою з JSON-файла (так додавали записи з блокнота та списки зі скріншотів).
+// Bulk-add perfumes from a JSON file (used for notebook entries and shop screenshots).
 //   node scripts/add-perfumes.mjs perfumes.json
-// Кожен елемент: { name, brand, status: "decant"|"wishlist"|..., fragrantica_id? | image? (шлях або URL),
+// Each item: { name, brand, status: "decant"|"wishlist"|..., fragrantica_id? | image? (path or URL),
 //   family?, concentration?, top_notes[], heart_notes[], base_notes[], rating? (0–5), price_per_ml?, review?, … }
-// Фото: image або https://fimgs.net/mdimg/perfume/o.<fragrantica_id>.jpg; кладеться на білий фон.
-// Дублікати (той самий бренд + назва) пропускаються. Перед імпортом перевір фото очима!
+// Photo: image or https://fimgs.net/mdimg/perfume/o.<fragrantica_id>.jpg; flattened onto white.
+// Duplicates (same brand + name) are skipped. Check the photos visually before importing!
 import { readFileSync } from 'node:fs'
 import sharp from 'sharp'
 import { createClient } from '@supabase/supabase-js'

@@ -16,7 +16,7 @@ export function More({ perfumes, terms }: { perfumes: Perfume[]; terms: Term[] }
     const tried = perfumes.filter(p => p.status !== 'wishlist')
     const rated = tried.filter(p => p.rating != null)
     const avg = rated.length ? rated.reduce((s, p) => s + p.rating!, 0) / rated.length : null
-    // Улюблені ноти — з ароматів з оцінкою 4 і вище
+    // Loved notes — from perfumes rated 4 and above
     const loved = rated.filter(p => p.rating! >= 4)
     const spent = new Map<string, number>()
     tried.forEach(p => {
