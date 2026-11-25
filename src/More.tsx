@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { supabase, allNotes, money, type Perfume, type Term } from './lib'
+import { allNotes, money, type Perfume, type Term } from './lib'
 import { buildModel, noteInsights } from './predict'
 import { ProfileCard, AccuracyCard } from './ai'
 import { go } from './App'
+import { Icon } from './ui'
 
 function top<T extends string>(xs: T[], n = 5) {
   const m = new Map<T, number>()
@@ -10,7 +11,7 @@ function top<T extends string>(xs: T[], n = 5) {
   return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, n)
 }
 
-export function More({ email, perfumes, terms }: { email: string; perfumes: Perfume[]; terms: Term[] }) {
+export function More({ perfumes, terms }: { perfumes: Perfume[]; terms: Term[] }) {
   const stats = useMemo(() => {
     const tried = perfumes.filter(p => p.status !== 'wishlist')
     const rated = tried.filter(p => p.rating != null)
@@ -34,19 +35,12 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
 
   const insight = useMemo(() => noteInsights(buildModel(perfumes)), [perfumes])
 
-  const exportData = () => {
-    const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), perfumes, terms }, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `perfume-diary-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-  }
-
   const max = (xs: [string, number][]) => Math.max(1, ...xs.map(x => x[1]))
 
   return (
     <>
-      <header className="page-head"><div><h1>Insights</h1><p className="muted small">what my notes say about me</p></div></header>
+      <header className="page-head"><div><h1>Insights</h1><p className="muted small">what my notes say about me</p></div>
+        <a className="btn-icon settings-link" href="#/settings" aria-label="Settings"><Icon name="gear" /></a></header>
 
       <div className="stat-row">
         <div className="stat"><span className="stat-num">{stats.tried}</span><span className="muted small">in my diary</span></div>
@@ -114,16 +108,6 @@ export function More({ email, perfumes, terms }: { email: string; perfumes: Perf
         </section>
       )}
 
-      <section className="card">
-        <h2>Data</h2>
-        <p className="muted small">Everything is stored in your Supabase database. You can download a backup file anytime.</p>
-        <button className="btn" onClick={exportData}>Download backup</button>
-      </section>
-
-      <section className="card">
-        <p className="muted small">Signed in as {email}</p>
-        <button className="btn ghost" onClick={() => supabase.auth.signOut()}>Sign out</button>
-      </section>
     </>
   )
 }

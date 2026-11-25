@@ -46,3 +46,4 @@
 25. Removed «обработай очередь» hints from the app (she knows how the queue works).
 26. Queue forecasts now read the perfume's Fragrantica page (accords, season votes, user reviews) via Chrome before predicting.
 27. Forecast card: «Forecast now» (diary only) and «With reviews» (web search of reviews first, ~2–4¢) + queue.
+28. Settings screen: name, change password, AI language (stored in user_settings, read by the Edge Function and the queue — no redeploy), backup, sign out.

@@ -848,3 +848,12 @@ img.cmp-img { object-fit: contain; background: #fff; }
   .tabbar a { min-width: 0; padding: 7px 2px 6px; }
   .tabbar a span { font-size: 10px; white-space: nowrap; }
 }
+
+/* Налаштування */
+.settings-row { display: flex; gap: 10px; align-items: flex-end; margin-top: 12px; }
+.settings-row .field { flex: 1; }
+.pw-form { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; align-items: flex-start; }
+.pw-form .pw-wrap, .pw-form > input { width: 100%; }
+/* На телефоні в нижньому меню 5 вкладок; Settings відкривається шестернею в Insights */
+@media (max-width: 1099px) { .tabbar a.tab-settings { display: none; } }
+@media (min-width: 1100px) { .settings-link { display: none; } }

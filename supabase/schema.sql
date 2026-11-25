@@ -162,3 +162,15 @@ alter table public.recommend_requests enable row level security;
 drop policy if exists "own recs" on public.recommend_requests;
 create policy "own recs" on public.recommend_requests for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Налаштування: ім'я та мова відповідей ІІ (змінюються на сайті без редеплою)
+create table if not exists public.user_settings (
+  user_id      uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  display_name text,
+  ai_language  text not null default 'Ukrainian',
+  updated_at   timestamptz not null default now()
+);
+alter table public.user_settings enable row level security;
+drop policy if exists "own settings" on public.user_settings;
+create policy "own settings" on public.user_settings for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());

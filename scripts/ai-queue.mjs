@@ -35,6 +35,8 @@ if (cmd === 'export') {
     sb.from('import_requests').select('*').eq('status', 'queued'),
   ])
   const { data: recs } = await sb.from('recommend_requests').select('*').eq('status', 'queued')
+  // мова й ім'я з Settings: усі тексти (прогнози, профіль, пояснення, підбірки) писати цією мовою
+  const { data: settings } = await sb.from('user_settings').select('ai_language, display_name').maybeSingle()
   // фото з черги зберігаємо поруч із файлом контексту, щоб їх можна було переглянути
   const imgDir = join(dirname(file), 'imports'); mkdirSync(imgDir, { recursive: true })
   const importItems = []
@@ -47,6 +49,8 @@ if (cmd === 'export') {
   const rated = perfumes.filter(p => p.status !== 'wishlist' && p.rating != null)
   const queue = predictions.filter(x => x.status === 'queued')
   const out = {
+    ai_language: settings?.ai_language ?? 'Ukrainian',
+    display_name: settings?.display_name ?? null,
     profile_requested: !!profile?.refresh_requested,
     current_profile: profile,
     rated_count: rated.length,
@@ -69,7 +73,7 @@ if (cmd === 'export') {
     }),
   }
   writeFileSync(file, JSON.stringify(out, null, 1))
-  console.log(`recommend: ${out.recommend.length}, imports: ${out.imports.length}, notes to explain: ${out.terms_to_explain.length}, lookups: ${out.lookups.length}, queue: ${queue.length}, profile requested: ${out.profile_requested}, rated: ${rated.length} → ${file}`)
+  console.log(`language: ${out.ai_language}, recommend: ${out.recommend.length}, imports: ${out.imports.length}, notes to explain: ${out.terms_to_explain.length}, lookups: ${out.lookups.length}, queue: ${queue.length}, profile requested: ${out.profile_requested}, rated: ${rated.length} → ${file}`)
 } else if (cmd === 'apply') {
   const res = JSON.parse(readFileSync(file, 'utf8'))
   if (res.profile) {

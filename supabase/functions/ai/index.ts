@@ -92,12 +92,13 @@ Rules: brand and name as the official perfume name in Latin letters (fix typos, 
 // ---------- Паспорт ноти: як пахне ----------
 
 async function explainNote(sb: SupabaseClient, note: string) {
+  const lang = await language(sb);
   const res = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 1500,
     messages: [{
       role: "user",
-      content: `Explain the perfume note "${note}" to a perfume lover who is learning. Write in Ukrainian, addressing her as "ти", simply and vividly.
+      content: `Explain the perfume note "${note}" to a perfume lover who is learning. Write in ${lang}, addressing her informally, simply and vividly.
 Reply with ONLY JSON: {"kind": "note"|"molecule"|"accord", "smell": "1–2 sentences: what it actually smells like, with everyday comparisons", "description": "2–4 sentences: what it is (natural/synthetic, where it comes from), how it behaves in perfumes, which notes it is often paired with, 2–3 well-known perfumes where it is prominent"}`,
     }],
   });
@@ -144,10 +145,17 @@ async function diary(sb: SupabaseClient) {
   return { all, rated, context };
 }
 
-const ROLE = `You know my perfume diary below. I test 3 ml decants. Write in Ukrainian, addressing me as "ти", short and concrete, in the style of my own reviews. Key patterns to respect: powdery notes (iris, violet, heliotrope, rose) usually disappoint me; sweet perfumes often please at first and then bore me or cause nausea after a few days; warm boozy/woody-vanilla scents for cold weather work best. Judge by how a perfume will likely smell and wear, not by note names alone.`;
+// Мова відповідей береться з таблиці user_settings (змінюється на сайті в Settings)
+async function language(sb: SupabaseClient) {
+  const { data } = await sb.from("user_settings").select("ai_language, display_name").maybeSingle();
+  const lang = String(data?.ai_language || "Ukrainian").slice(0, 40);
+  const name = String(data?.display_name ?? "").trim().slice(0, 40);
+  return name ? `${lang} (my name is ${name})` : lang;
+}
+const role = (lang: string) => `You know my perfume diary below. I test 3 ml decants. Write in ${lang}, addressing me informally (as a friend), short and concrete, in the style of my own reviews. Key patterns to respect: powdery notes (iris, violet, heliotrope, rose) usually disappoint me; sweet perfumes often please at first and then bore me or cause nausea after a few days; warm boozy/woody-vanilla scents for cold weather work best. Judge by how a perfume will likely smell and wear, not by note names alone.`;
 
 async function forecast(sb: SupabaseClient, perfumeId: string, withReviews = false) {
-  const { all, context } = await diary(sb);
+  const [{ all, context }, lang] = await Promise.all([diary(sb), language(sb)]);
   const p = all.find(x => x.id === perfumeId);
   if (!p) throw new Error("Perfume not found");
   // З відгуками: модель спершу шукає в інтернеті, що люди пишуть про аромат (~2–4¢ замість <1¢)
@@ -166,7 +174,7 @@ Reply with ONLY JSON: {"rating": number 0.5–5 in 0.5 steps, "confidence": "low
     res = await anthropic.messages.create({
       model: MODEL,
       max_tokens: withReviews ? 6000 : 3000,
-      system: [{ type: "text", text: ROLE }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text", text: role(lang) }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
       ...(withReviews ? { tools: [{ type: "web_search_20250305" as const, name: "web_search" as const, max_uses: 3 }] } : {}),
       messages,
     });
@@ -187,15 +195,15 @@ Reply with ONLY JSON: {"rating": number 0.5–5 in 0.5 steps, "confidence": "low
 }
 
 async function profile(sb: SupabaseClient) {
-  const { rated, context } = await diary(sb);
+  const [{ rated, context }, lang] = await Promise.all([diary(sb), language(sb)]);
   const res = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 3000,
-    system: [{ type: "text", text: ROLE }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
+    system: [{ type: "text", text: role(lang) }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
     messages: [{
       role: "user",
-      content: `Rewrite my taste profile from ALL my reviews (texts matter more than note names). Three short paragraphs in Ukrainian: what I love (with examples), what disappoints me and why, my patterns (seasons, sweetness fatigue, longevity, price).
-Reply with ONLY JSON: {"profile": "...", "loves": ["4–7 short Ukrainian tags"], "avoids": ["5–9 short Ukrainian tags"]}`,
+      content: `Rewrite my taste profile from ALL my reviews (texts matter more than note names). Three short paragraphs in ${lang}: what I love (with examples), what disappoints me and why, my patterns (seasons, sweetness fatigue, longevity, price).
+Reply with ONLY JSON: {"profile": "...", "loves": ["4–7 short tags in ${lang}"], "avoids": ["5–9 short tags in ${lang}"]}`,
     }],
   });
   const f = parseJson(textOf(res.content));
@@ -210,7 +218,7 @@ Reply with ONLY JSON: {"profile": "...", "loves": ["4–7 short Ukrainian tags"]
 // ---------- Асистент-підбирач ----------
 
 async function recommend(sb: SupabaseClient, query: string, perfumeId: string | null) {
-  const { all, context } = await diary(sb);
+  const [{ all, context }, lang] = await Promise.all([diary(sb), language(sb)]);
   const base = perfumeId ? all.find(p => p.id === perfumeId) : null;
   const known = all.map(p => `${p.brand ?? ""} ${p.name}`.trim()).join("; ");
   const ask = base
@@ -224,7 +232,7 @@ Search the web (fragrantica.com is best) and suggest 5–8 real perfumes I have 
 Use my reviews and taste profile: avoid what I dislike, explain honestly where the risk is.
 
 Reply with ONLY JSON:
-{"items":[{"name":"","brand":"","year":null,"family":null,"concentration":null,"fragrantica_url":"","top_notes":[],"heart_notes":[],"base_notes":[],"why":"2–3 sentences in Ukrainian addressed to me (ти): why it fits my request and taste, compared with perfumes I rated","risk":"1 sentence in Ukrainian or null","match":"high"|"medium"|"low"}]}
+{"items":[{"name":"","brand":"","year":null,"family":null,"concentration":null,"fragrantica_url":"","top_notes":[],"heart_notes":[],"base_notes":[],"why":"2–3 sentences in ${lang} addressed to me informally: why it fits my request and taste, compared with perfumes I rated","risk":"1 sentence in ${lang} or null","match":"high"|"medium"|"low"}]}
 Notes in English lowercase. fragrantica_url must be an exact perfume page URL ending with -<number>.html.`,
   }];
   let res: Anthropic.Message | null = null;
@@ -232,7 +240,7 @@ Notes in English lowercase. fragrantica_url must be an exact perfume page URL en
     res = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 8000,
-      system: [{ type: "text", text: ROLE }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text", text: role(lang) }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
       tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 6 }],
       messages,
     });

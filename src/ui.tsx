@@ -161,7 +161,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   )
 }
 
-export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'heart-fill' | 'search' | 'filter' | 'bottle' | 'book' | 'more' | 'camera' | 'trash' | 'close' | 'bookmark' | 'link' | 'check' | 'spark' | 'grid' | 'list' | 'eye' | 'eye-off' }) {
+export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'heart-fill' | 'search' | 'filter' | 'bottle' | 'book' | 'more' | 'camera' | 'trash' | 'close' | 'bookmark' | 'link' | 'check' | 'spark' | 'grid' | 'list' | 'eye' | 'eye-off' | 'gear' }) {
   const p: Record<string, ReactNode> = {
     back: <path d="M15 5l-7 7 7 7" />,
     plus: <path d="M12 5v14M5 12h14" />,
@@ -183,6 +183,7 @@ export function Icon({ name }: { name: 'back' | 'plus' | 'edit' | 'heart' | 'hea
     eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" /><circle cx="12" cy="12" r="3" /></>,
     'eye-off': <><path d="M4 4l16 16" /><path d="M9.9 5.8A9.6 9.6 0 0112 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 01-3.1 3.9M6.6 7.2C4 9 2.5 12 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.3-1.1" /><path d="M9.9 10a3 3 0 004.1 4.1" /></>,
     check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+    gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" /><circle cx="12" cy="12" r="6.2" /></>,
     spark: <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" />,
   }
   return (
