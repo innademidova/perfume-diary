@@ -45,3 +45,4 @@
 24. Taste profile: «Update now / Add to queue» buttons always visible (no «Update anyway» dropdown).
 25. Removed «обработай очередь» hints from the app (she knows how the queue works).
 26. Queue forecasts now read the perfume's Fragrantica page (accords, season votes, user reviews) via Chrome before predicting.
+27. Forecast card: «Forecast now» (diary only) and «With reviews» (web search of reviews first, ~2–4¢) + queue.

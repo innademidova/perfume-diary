@@ -146,23 +146,34 @@ async function diary(sb: SupabaseClient) {
 
 const ROLE = `You know my perfume diary below. I test 3 ml decants. Write in Ukrainian, addressing me as "ти", short and concrete, in the style of my own reviews. Key patterns to respect: powdery notes (iris, violet, heliotrope, rose) usually disappoint me; sweet perfumes often please at first and then bore me or cause nausea after a few days; warm boozy/woody-vanilla scents for cold weather work best. Judge by how a perfume will likely smell and wear, not by note names alone.`;
 
-async function forecast(sb: SupabaseClient, perfumeId: string) {
+async function forecast(sb: SupabaseClient, perfumeId: string, withReviews = false) {
   const { all, context } = await diary(sb);
   const p = all.find(x => x.id === perfumeId);
   if (!p) throw new Error("Perfume not found");
-  const res = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 3000,
-    system: [{ type: "text", text: ROLE }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
-    messages: [{
-      role: "user",
-      content: `Predict how I will rate and feel about this perfume I haven't rated yet:
-${JSON.stringify(slim(p))}
+  // З відгуками: модель спершу шукає в інтернеті, що люди пишуть про аромат (~2–4¢ замість <1¢)
+  const reviewsTask = withReviews
+    ? `\n\nFirst search the web for what people say about this exact perfume (Fragrantica reviews and main accords, Parfumo, Reddit, blogs): which notes dominate, is it powdery, cloying or sweet, longevity and sillage. Weigh these real impressions more than the note list, and mention in the summary what reviews say when it matters for me.`
+    : "";
+  const messages: Anthropic.MessageParam[] = [{
+    role: "user",
+    content: `Predict how I will rate and feel about this perfume I haven't rated yet:
+${JSON.stringify(slim(p))}${reviewsTask}
 
 Reply with ONLY JSON: {"rating": number 0.5–5 in 0.5 steps, "confidence": "low"|"medium"|"high", "summary": "3–5 sentences: what I will probably smell, like and dislike, compared with perfumes I rated", "likes": ["2–4 short tags"], "risks": ["2–4 short tags"]}`,
-    }],
-  });
-  const f = parseJson(textOf(res.content));
+  }];
+  let res: Anthropic.Message | null = null;
+  for (let i = 0; i < 3; i++) {
+    res = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: withReviews ? 6000 : 3000,
+      system: [{ type: "text", text: ROLE }, { type: "text", text: context, cache_control: { type: "ephemeral" } }],
+      ...(withReviews ? { tools: [{ type: "web_search_20250305" as const, name: "web_search" as const, max_uses: 3 }] } : {}),
+      messages,
+    });
+    if (res.stop_reason !== "pause_turn") break;
+    messages.push({ role: "assistant", content: res.content });
+  }
+  const f = parseJson(textOf(res!.content));
   const row = {
     perfume_id: perfumeId, status: "done",
     rating: Math.max(0.5, Math.min(5, Math.round(Number(f.rating) * 2) / 2)),
@@ -255,7 +266,7 @@ Deno.serve(async (req) => {
     switch (body.action) {
       case "lookup": return json(await lookup(String(body.query ?? "").slice(0, 200)));
       case "image": return json(await saveImage(sb, user.id, String(body.fragrantica_id)));
-      case "forecast": return json(await forecast(sb, String(body.perfume_id)));
+      case "forecast": return json(await forecast(sb, String(body.perfume_id), body.with_reviews === true));
       case "profile": return json(await profile(sb));
       case "recommend": return json(await recommend(sb, String(body.query ?? "").slice(0, 600), body.perfume_id ? String(body.perfume_id) : null));
       case "scan": return json(await scan(String(body.image), String(body.media_type ?? "image/jpeg")));

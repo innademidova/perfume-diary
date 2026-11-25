@@ -36,14 +36,16 @@ export const useAI = () => useContext(AIContext)
 
 
 // Два способи: зараз через API (платно, копійки) або в чергу для Claude Code (безкоштовно, пізніше)
-export function TwoWays({ now, later, busy, nowLabel = 'Now', laterLabel = 'Add to queue' }: {
+export function TwoWays({ now, later, busy, nowLabel = 'Now', laterLabel = 'Add to queue', alt }: {
   now: () => void; later?: () => void; busy: boolean; nowLabel?: string; laterLabel?: string
+  alt?: { label: string; run: () => void }
 }) {
   return (
     <div className="two-ways">
       <button className="btn primary sm" onClick={now} disabled={busy}>
         <Icon name="spark" /> {busy ? 'Thinking…' : nowLabel}
       </button>
+      {alt && <button className="btn sm" onClick={alt.run} disabled={busy}><Icon name="spark" /> {alt.label}</button>}
       {later && <button className="btn sm" onClick={later} disabled={busy}>{laterLabel}</button>}
     </div>
   )
@@ -58,9 +60,10 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
-  const now = async () => {
+  // withReviews: перед прогнозом ІІ шукає відгуки в інтернеті (дорожче, ~2–4¢)
+  const now = async (withReviews = false) => {
     setBusy(true); setErr('')
-    try { savePrediction(await callAI<Prediction>({ action: 'forecast', perfume_id: perfume.id }), perfume.id) }
+    try { savePrediction(await callAI<Prediction>({ action: 'forecast', perfume_id: perfume.id, with_reviews: withReviews }), perfume.id) }
     catch (e) { setErr(e instanceof Error ? e.message : String(e)) }
     setBusy(false)
   }
@@ -101,7 +104,7 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
     <section className="card forecast">
       <h2>AI forecast</h2>
       <p className="muted small">Claude will compare this perfume with everything in my diary and guess my rating and impressions.</p>
-      <TwoWays now={now} later={request} busy={busy} nowLabel="Forecast now" />
+      <TwoWays now={() => now()} later={request} busy={busy} nowLabel="Forecast now" alt={{ label: 'With reviews', run: () => now(true) }} />
       {err && <p className="error">{err}</p>}
     </section>
   )
@@ -111,7 +114,7 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
       <h2>AI forecast</h2>
       <p className="queued">⏳ In the queue since {formatDate(pr.requested_at.slice(0, 10))}</p>
       <div className="row">
-        <button className="btn sm" onClick={now} disabled={busy}><Icon name="spark" /> {busy ? 'Thinking…' : 'Do it now instead'}</button>
+        <button className="btn sm" onClick={() => now()} disabled={busy}><Icon name="spark" /> {busy ? 'Thinking…' : 'Do it now instead'}</button>
         <button className="btn ghost sm" onClick={cancel}>Cancel request</button>
       </div>
       {err && <p className="error">{err}</p>}
@@ -138,7 +141,7 @@ export function ForecastCard({ perfume }: { perfume: Perfume }) {
       <p className="muted small">Made {pr.done_at ? formatDate(pr.done_at.slice(0, 10)) : ''} · it's a guess, not a verdict</p>
       <details>
         <summary className="small muted">Ask again</summary>
-        <TwoWays now={now} later={request} busy={busy} nowLabel="Forecast now" />
+        <TwoWays now={() => now()} later={request} busy={busy} nowLabel="Forecast now" alt={{ label: 'With reviews', run: () => now(true) }} />
       </details>
       {err && <p className="error">{err}</p>}
     </section>
