@@ -42,3 +42,4 @@
 21. Helper scripts moved into the repo (sql.mjs, add-perfumes.mjs) and CLAUDE.md documents what persists between sessions.
 22. Add from photo (screenshot/bottles/notebook → recognize → skip duplicates → find versions → add; or queue), perfume links (similar/alternative/twin, 15 seeded from her reviews) with side-by-side Compare, Note passport (/n/<note>: explanation via AI or queue, saved to glossary; her average; often paired; perfumes by section). Tapping notes anywhere opens the passport.
 23. Discover tab: AI recommendations beyond the diary (free-text request or «Find similar outside my diary» on a perfume card), results with photo, why/risk in Ukrainian, match level, one-tap «Want to try» (reason = AI recommendation). Now (~3–5¢, ~40 s) or queue.
+24. Taste profile: «Update now / Add to queue» buttons always visible (no «Update anyway» dropdown).

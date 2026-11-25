@@ -186,13 +186,8 @@ export function ProfileCard({ ratedCount }: { ratedCount: number }) {
           <p className="muted small">{QUEUE_HINT}</p>
           <button className="btn sm" onClick={now} disabled={busy}><Icon name="spark" /> {busy ? 'Thinking…' : 'Do it now instead'}</button>
         </>
-      ) : (!profile?.profile || fresh >= 3) ? (
-        <TwoWays now={now} later={request} busy={busy} nowLabel={profile?.profile ? 'Update now' : 'Build now'} />
       ) : (
-        <details>
-          <summary className="small muted">Update anyway</summary>
-          <TwoWays now={now} later={request} busy={busy} nowLabel="Update now" />
-        </details>
+        <TwoWays now={now} later={request} busy={busy} nowLabel={profile?.profile ? 'Update now' : 'Build now'} />
       )}
       {err && <p className="error">{err}</p>}
     </section>
