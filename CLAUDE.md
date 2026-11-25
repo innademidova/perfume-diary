@@ -98,7 +98,9 @@ The app only queues requests; Claude Code is the model. When she asks to process
    **Before each forecast read the perfume's Fragrantica page in Chrome** (claude-in-chrome `get_page_text`; reading
    works): main accords (e.g. "powdery", "sweet"), season votes, rating, and user reviews (what people say about
    powderiness, sweetness, longevity, which note dominates). Her ratings follow how a perfume actually smells, not the
-   note list, so reviews weigh more than notes. If Fragrantica fails, use Google snippets / Parfumo / Reddit. Mention
+   note list, so reviews weigh more than notes. How: open the page with the `navigate` tool (a page reached by
+   clicking a link can be "permission denied" for reading), then click the "Reviews (N)" link and `get_page_text`
+   again — review texts load only after that click. If Fragrantica fails, use Google snippets / Parfumo / Reddit. Mention
    in the summary what the reviews say when it matters.
 4a. For each item in `imports`: look at the image (Read the local file), recognize perfumes (shop screenshot,
    bottles, or a Ukrainian notebook page with rating /10 and review), skip ones already in the diary, find them on
