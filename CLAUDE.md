@@ -95,6 +95,11 @@ The app only queues requests; Claude Code is the model. When she asks to process
 3. For each queued perfume write a forecast: rating (0.5 steps), confidence, a 3–5 sentence summary in Ukrainian
    in her style (what she'll probably smell, what she'll like/dislike, compare with perfumes she rated), likes/risks
    tags. Use her patterns (see INSIGHTS) and similar rated perfumes. Learn from past misses.
+   **Before each forecast read the perfume's Fragrantica page in Chrome** (claude-in-chrome `get_page_text`; reading
+   works): main accords (e.g. "powdery", "sweet"), season votes, rating, and user reviews (what people say about
+   powderiness, sweetness, longevity, which note dominates). Her ratings follow how a perfume actually smells, not the
+   note list, so reviews weigh more than notes. If Fragrantica fails, use Google snippets / Parfumo / Reddit. Mention
+   in the summary what the reviews say when it matters.
 4a. For each item in `imports`: look at the image (Read the local file), recognize perfumes (shop screenshot,
    bottles, or a Ukrainian notebook page with rating /10 and review), skip ones already in the diary, find them on
    Fragrantica, verify photos, add with `scripts/add-perfumes.mjs` (status = `target_status`), then list the id in

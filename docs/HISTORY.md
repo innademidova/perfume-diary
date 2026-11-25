@@ -44,3 +44,4 @@
 23. Discover tab: AI recommendations beyond the diary (free-text request or «Find similar outside my diary» on a perfume card), results with photo, why/risk in Ukrainian, match level, one-tap «Want to try» (reason = AI recommendation). Now (~3–5¢, ~40 s) or queue.
 24. Taste profile: «Update now / Add to queue» buttons always visible (no «Update anyway» dropdown).
 25. Removed «обработай очередь» hints from the app (she knows how the queue works).
+26. Queue forecasts now read the perfume's Fragrantica page (accords, season votes, user reviews) via Chrome before predicting.
