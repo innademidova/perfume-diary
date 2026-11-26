@@ -26,6 +26,7 @@ export type Signal = {
   notes: string[]
   min?: number
   accords?: string[]
+  names?: string[]   // matches if the perfume name contains one of these (e.g. "eau fraiche")
   examples?: string[]
 }
 
@@ -35,7 +36,10 @@ export function matchSignals(p: Perfume, signals: Signal[]) {
   return signals.flatMap(s => {
     const hitNotes = s.notes.map(canon).filter(n => notes.has(n))
     const hitAccords = (s.accords ?? []).filter(a => accords.has(a.toLowerCase()))
-    return hitNotes.length >= (s.min ?? 1) || hitAccords.length ? [{ ...s, hitNotes, hitAccords }] : []
+    const name = p.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const hitNames = (s.names ?? []).filter(n => name.includes(n.toLowerCase()))
+    const notesOk = s.notes.length > 0 && hitNotes.length >= (s.min ?? 1)
+    return notesOk || hitAccords.length || hitNames.length ? [{ ...s, hitNotes, hitAccords: [...hitAccords, ...hitNames] }] : []
   })
 }
 

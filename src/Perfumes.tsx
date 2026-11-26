@@ -429,7 +429,7 @@ export function PerfumeDetail({ perfume: p, perfumes, terms, onChange, onDelete,
                       <b>{s.title}</b>
                       <p className="small">{s.why}</p>
                       <p className="muted small">
-                        {[...s.hitNotes, ...s.hitAccords.map(a => `${a} (accord)`)].join(', ')}
+                        {[...s.hitNotes, ...s.hitAccords].join(', ')}
                         {s.examples?.length ? ` · like ${s.examples.join(', ')}` : ''}
                       </p>
                     </div>

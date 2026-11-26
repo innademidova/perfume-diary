@@ -104,7 +104,7 @@ The app only queues requests; Claude Code is the model. When she asks to process
    texts**, not just notes. Keep it ~3 short paragraphs in `ai_language` addressed to her informally, plus loves/avoids tags.
    Also rewrite `signals` (red/green flags shown on To rate / Want to try cards instead of per-note averages): 5–10
    patterns that really follow from her reviews (combinations and dominant notes, not single notes that happened to be
-   in failures): `{type, title, why, notes[] (canonical, see src/predict.ts canon), min, accords[], examples[]}`;
+   in failures): `{type, title, why, notes[] (canonical, see src/predict.ts canon), min, accords[], names[] (substring of perfume name), examples[]}`;
    title/why in `ai_language`.
 3. For each queued perfume write a forecast: rating (0.5 steps), confidence, a 3–5 sentence summary in `ai_language`
    in her style (what she'll probably smell, what she'll like/dislike, compare with perfumes she rated), likes/risks

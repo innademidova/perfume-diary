@@ -49,3 +49,4 @@
 28. Settings screen: name, change password, AI language (stored in user_settings, read by the Edge Function and the queue — no redeploy), backup, sign out.
 29. Repo switched to English-only (no Cyrillic in code, prompts, docs, commits). Repo made public again, Pages back on.
 30. Red/green signals from her reviews replace per-note averages on To rate / Want to try cards (taste_profile.signals); Fragrantica main accords stored in perfumes.accords and shown on the card.
+31. Profile and signals rewritten in Russian (her AI language); new green signal for light Eau Fraîche versions; signals can match by perfume name.
