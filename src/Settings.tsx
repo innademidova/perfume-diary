@@ -7,7 +7,7 @@ import { Icon } from './ui'
 export type UserSettings = { display_name: string | null; ai_language: string }
 
 // Languages the AI can write forecasts, the taste profile, note explanations and picks in
-export const AI_LANGUAGES = ['Ukrainian', 'English', 'Polish', 'German', 'French', 'Spanish', 'Italian']
+export const AI_LANGUAGES = ['Ukrainian', 'English', 'Russian']
 
 export async function loadSettings(): Promise<UserSettings> {
   const { data } = await supabase.from('user_settings').select('display_name, ai_language').maybeSingle()
@@ -64,14 +64,11 @@ export function Settings({ email, perfumes, terms }: { email: string; perfumes: 
         <h2>Preferences</h2>
         <label className="field">
           <span className="field-label">AI language</span>
-          <select value={s ? (known ? s.ai_language : 'other') : ''} disabled={!s}
-            onChange={e => e.target.value !== 'other' && save({ ai_language: e.target.value }, 'lang')}>
+          <select value={s ? (known ? s.ai_language : 'Ukrainian') : ''} disabled={!s}
+            onChange={e => save({ ai_language: e.target.value }, 'lang')}>
             {AI_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
-            <option value="other">Other…</option>
           </select>
         </label>
-        {s && !known && <p className="muted small">Current: {s.ai_language}</p>}
-        <OtherLanguage onSave={l => save({ ai_language: l }, 'lang')} />
         <p className="muted small">Forecasts, the taste profile, note explanations and Discover picks will be written in this language. Already written texts stay as they are until you update them.</p>
         {saved === 'lang' && <p className="muted small">✓ Saved</p>}
       </section>
@@ -88,19 +85,6 @@ export function Settings({ email, perfumes, terms }: { email: string; perfumes: 
         <button className="btn ghost" onClick={() => supabase.auth.signOut()}>Sign out</button>
       </section>
     </>
-  )
-}
-
-function OtherLanguage({ onSave }: { onSave: (l: string) => void }) {
-  const [v, setV] = useState('')
-  return (
-    <form className="settings-row" onSubmit={e => { e.preventDefault(); if (v.trim()) { onSave(v.trim()); setV('') } }}>
-      <label className="field">
-        <span className="field-label">Or type another language</span>
-        <input value={v} onChange={e => setV(e.target.value)} placeholder="e.g. Czech" />
-      </label>
-      <button className="btn sm" disabled={!v.trim()}>Use</button>
-    </form>
   )
 }
 

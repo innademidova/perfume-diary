@@ -16,7 +16,8 @@ More detail: `docs/HISTORY.md` (what was built and why, in order), `docs/INSIGHT
   history). Exceptions are her data only (reviews, glossary texts in the database), never files in the repo.
   Chat replies to the owner: in the language she writes in, plain and non-technical.
 - AI output language (forecasts, profile, note explanations, Discover picks) = `user_settings.ai_language`, set by her
-  in the app (Settings). Never hardcode it in prompts.
+  in the app (Settings: Ukrainian, English or Russian; her choice, the no-Russian rule is about repo files only).
+  Never hardcode it in prompts.
 - Her reviews are kept exactly in her words (Ukrainian); only punctuation may be fixed.
   Notes are stored in **English, lowercase** (matches the UI's note suggestions and filters).
 - Design: soft pastel pink + powder blue, modern sans (Plus Jakarta Sans), rounded translucent
